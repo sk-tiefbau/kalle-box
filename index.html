@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="manifest.json?v=2">
+  <link rel="manifest" href="manifest.json?v=3">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <title>Kalle Box – SK Erd- und Tiefbau GmbH</title>
@@ -34,19 +34,19 @@
 
     .nav-tabs {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
       padding: 10px 12px 0;
       max-width: 680px;
       margin: 0 auto;
     }
     .nav-btn {
-      padding: 13px 8px;
+      padding: 12px 6px;
       border: 2px solid #cbd5e1;
       border-radius: 10px;
       background: #fff;
       font-weight: bold;
-      font-size: 14.5px;
+      font-size: 13.5px;
       color: #334155;
       cursor: pointer;
       text-align: center;
@@ -54,6 +54,11 @@
     .nav-btn.active {
       background: #0f172a;
       border-color: #0f172a;
+      color: #fff;
+    }
+    .nav-btn.intern.active {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
       color: #fff;
     }
 
@@ -99,8 +104,9 @@
       border: 1px solid #bfdbfe;
       border-radius: 9px;
       padding: 12px 14px;
-      font-size: 14px;
-      margin-top: 10px;
+      font-size: 13.5px;
+      margin-top: 8px;
+      margin-bottom: 12px;
       line-height: 1.45;
       color: #1e3a8a;
     }
@@ -164,6 +170,7 @@
       margin-top: 18px;
     }
     .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-intern { background: #1d4ed8; }
 
     .sub-tabs {
       display: grid;
@@ -205,13 +212,14 @@
 <body>
 
   <div class="topbar">
-    <h1>🚛 Kalle Box – Containerdienst</h1>
+    <h1>🚛 Kalle Box – Container & Transport</h1>
     <p>SK Erd- und Tiefbau GmbH · Pegau</p>
   </div>
 
   <div class="nav-tabs">
-    <button id="nav-abholung" class="nav-btn active" onclick="wechsleAnsicht('abholung')">✍️ Abholung & Schein</button>
-    <button id="nav-bestellung" class="nav-btn" onclick="wechsleAnsicht('bestellung')">📦 Neu bestellen</button>
+    <button id="nav-abholung" class="nav-btn active" onclick="wechsleAnsicht('abholung')">✍️ Abholung</button>
+    <button id="nav-bestellung" class="nav-btn" onclick="wechsleAnsicht('bestellung')">📦 Bestellen</button>
+    <button id="nav-intern" class="nav-btn intern" onclick="wechsleAnsicht('intern')">🚛 SK-Intern</button>
   </div>
 
   <!-- ANSICHT 1: ABHOLUNG & UNTERSCHRIFT -->
@@ -267,7 +275,7 @@
     </div>
   </div>
 
-  <!-- ANSICHT 2: NEUE BESTELLUNG -->
+  <!-- ANSICHT 2: NEUE KUNDEN-BESTELLUNG -->
   <div id="view-bestellung" class="wrap hidden">
     <div id="bestell-form" class="card">
       <div class="sub-tabs">
@@ -368,307 +376,5 @@
     </div>
   </div>
 
-  <script>
-    // HIER DEINE AKTUELLE KALLE-BOX WEB-APP-URL EINTRAGEN:
-    const API_URL = "https://script.google.com/macros/s/AKfycbzSI9HU8_1n223oiKVgtN0FiqwUJK-7XTvnmxOop2w7ZRJ_3NX5gorzP1iI3zyMCTE6/exec";
-
-    let CONTAINER_LISTE = [];
-    let PAD_KUNDE = null;
-    let BESTELL_ART = "container";
-
-    const PAUSCHALEN = {
-      "1,0 m³": { netto: 150.42, brutto: 179.00 },
-      "1,7 m³": { netto: 184.03, brutto: 219.00 },
-      "2,5 m³": { netto: 217.65, brutto: 259.00 },
-      "3,5 m³": { netto: 268.07, brutto: 319.00 },
-      "5,0 m³": { netto: 318.49, brutto: 379.00 }
-    };
-    const GEWICHT_PREISE = {
-      "Gemischte Bau- und Abbruchabfälle (AVV 170904)": { netto: 192.44, brutto: 229.00 },
-      "Sperrmüll (sortierfähig)": { netto: 192.44, brutto: 229.00 },
-      "Gips / Gasbeton rein sortiert (AVV 170802)": { netto: 108.40, brutto: 129.00 },
-      "Holz / Holzwerkstoffe Kat. A II - A III": { netto: 74.79, brutto: 89.00 },
-      "Kompostierbare Abfälle / Grünschnitt": { netto: 74.79, brutto: 89.00 },
-      "Wurzelholz / Baumstümpfe": { netto: 116.81, brutto: 139.00 }
-    };
-    const SCHUETTGUT = {
-      "Sand (0-2 / 0-4 mm)": 25.21,
-      "Mineralgemisch FSS B2 (0-32 mm)": 25.21,
-      "Mineralgemisch STS B1 (0-32 mm)": 26.89,
-      "Brechsand (0-2 mm)": 29.41,
-      "Oberboden gesiebt": 33.61,
-      "Splitt (2-5 mm)": 37.82
-    };
-
-    function wechsleAnsicht(tab) {
-      document.getElementById("nav-abholung").classList.toggle("active", tab === "abholung");
-      document.getElementById("nav-bestellung").classList.toggle("active", tab === "bestellung");
-      document.getElementById("view-abholung").classList.toggle("hidden", tab !== "abholung");
-      document.getElementById("view-bestellung").classList.toggle("hidden", tab !== "bestellung");
-      if (tab === "abholung") initPad();
-    }
-
-    function initPad() {
-      const canvas = document.getElementById("pad-kunde");
-      const ctx = canvas.getContext("2d");
-      const rect = canvas.getBoundingClientRect();
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
-      canvas.width = Math.max(rect.width, 280) * ratio;
-      canvas.height = 195 * ratio;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(ratio, ratio);
-      ctx.lineWidth = 3;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "#0f172a";
-
-      let drawing = false;
-      let hasInk = false;
-
-      function getPos(e) {
-        const r = canvas.getBoundingClientRect();
-        const t = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
-        return { x: t.clientX - r.left, y: t.clientY - r.top };
-      }
-      function start(e) {
-        if (e.cancelable) e.preventDefault();
-        drawing = true;
-        const p = getPos(e);
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x + 0.1, p.y + 0.1);
-        ctx.stroke();
-        hasInk = true;
-      }
-      function move(e) {
-        if (!drawing) return;
-        if (e.cancelable) e.preventDefault();
-        const p = getPos(e);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-        hasInk = true;
-      }
-      function end() { drawing = false; }
-
-      canvas.onpointerdown = start;
-      canvas.onpointermove = move;
-      window.onpointerup = end;
-      canvas.ontouchstart = start;
-      canvas.ontouchmove = move;
-      canvas.ontouchend = end;
-
-      PAD_KUNDE = {
-        isEmpty: () => !hasInk,
-        clear: () => {
-          ctx.save();
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.restore();
-          hasInk = false;
-        },
-        toDataUrl: () => canvas.toDataURL("image/png")
-      };
-    }
-
-    function clearPad() { if (PAD_KUNDE) PAD_KUNDE.clear(); }
-
-    async function ladeContainerListe() {
-      const sel = document.getElementById("sel-box");
-      sel.innerHTML = '<option value="">⏳ Lade aktive Container...</option>';
-      try {
-        const resp = await fetch(API_URL + "?mode=list");
-        const data = await resp.json();
-        CONTAINER_LISTE = data.items || [];
-        if (CONTAINER_LISTE.length === 0) {
-          sel.innerHTML = '<option value="">Keine aktiven Container draußen gefunden</option>';
-          document.getElementById("box-details").classList.add("hidden");
-          return;
-        }
-        sel.innerHTML = CONTAINER_LISTE.map((c, i) =>
-          `<option value="${i}">${c.boxId} · ${c.baustelle} (${c.groesse})</option>`
-        ).join("");
-        zeigeContainerDetails();
-      } catch (e) {
-        sel.innerHTML = '<option value="">⚠️ Verbindung prüfen & Aktualisieren tippen</option>';
-      }
-    }
-
-    function zeigeContainerDetails() {
-      const idx = document.getElementById("sel-box").value;
-      const box = document.getElementById("box-details");
-      if (idx === "" || !CONTAINER_LISTE[idx]) {
-        box.classList.add("hidden");
-        return;
-      }
-      const c = CONTAINER_LISTE[idx];
-      box.classList.remove("hidden");
-      box.innerHTML = `<b>${c.boxId}</b> · Gestellt am <b>${c.datum}</b> (${c.tage} Tage)<br>` +
-                      `📍 <b>${c.baustelle}</b><br>` +
-                      `📦 ${c.groesse} · ${c.material} (${c.fahrzeug})`;
-    }
-
-    async function abholungAbsenden() {
-      const idx = document.getElementById("sel-box").value;
-      if (idx === "" || !CONTAINER_LISTE[idx]) {
-        alert("Bitte zuerst einen Container auswählen.");
-        return;
-      }
-      if (!PAD_KUNDE || PAD_KUNDE.isEmpty()) {
-        alert("Bitte lassen Sie den Kunden auf dem Display unterschreiben.");
-        return;
-      }
-      const c = CONTAINER_LISTE[idx];
-      const payload = {
-        action: "abholung",
-        rowIndex: c.rowIndex,
-        boxId: c.boxId,
-        gewichtTo: document.getElementById("gewicht").value.trim(),
-        bemerkung: document.getElementById("bemerkung").value.trim(),
-        email: document.getElementById("kunde-mail").value.trim(),
-        fahrer: document.getElementById("fahrer").value,
-        sigKunde: PAD_KUNDE.toDataUrl()
-      };
-
-      const btn = document.getElementById("btn-abhol-send");
-      btn.disabled = true;
-      btn.innerText = "⏳ Erstelle PDF & speichere...";
-
-      try {
-        const resp = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        });
-        const res = await resp.json();
-        if (!res.ok) throw new Error(res.error || "Fehler beim Speichern");
-
-        document.getElementById("abhol-form").classList.add("hidden");
-        document.getElementById("abhol-done").classList.remove("hidden");
-        document.getElementById("abhol-done-msg").innerHTML =
-          `Container <b>${res.boxId}</b> wurde als abgeholt verbucht und im Ordner <b>Entsorgung</b> abgelegt.`;
-        document.getElementById("abhol-pdf-link").href = res.pdfUrl;
-      } catch (err) {
-        alert("Fehler: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "✅ Abholung bestätigen & Beleg erstellen";
-      }
-    }
-
-    function resetAbholung() {
-      document.getElementById("abhol-done").classList.add("hidden");
-      document.getElementById("abhol-form").classList.remove("hidden");
-      clearPad();
-      ladeContainerListe();
-    }
-
-    function setBestellArt(art) {
-      BESTELL_ART = art;
-      document.getElementById("sub-cont").classList.toggle("active", art === "container");
-      document.getElementById("sub-schuett").classList.toggle("active", art === "schuettgut");
-      document.getElementById("grp-cont").classList.toggle("hidden", art !== "container");
-      document.getElementById("grp-schuett").classList.toggle("hidden", art !== "schuettgut");
-      berechnePreis();
-    }
-
-    function fmt(n) { return n.toFixed(2).replace(".", ",") + " €"; }
-
-    function berechnePreis() {
-      if (BESTELL_ART === "schuettgut") {
-        const mat = document.getElementById("mat-schuett").value;
-        const to = Math.max(0.5, parseFloat(document.getElementById("tonnen").value) || 1);
-        const transp = to > 4.5 ? 58.82 : 46.22;
-        const netto = (to * SCHUETTGUT[mat]) + transp;
-        document.getElementById("live-brutto").innerText = fmt(netto * 1.19) + " brutto";
-        document.getElementById("live-netto").innerText = fmt(netto) + " netto · inkl. " + to.toFixed(1).replace(".", ",") + " to & Anfahrt";
-        return;
-      }
-      const mat = document.getElementById("mat-cont").value;
-      const gr = document.getElementById("groesse").value;
-      const istMan = (gr === "3,5 m³" || gr === "5,0 m³");
-      if (mat.indexOf("Reiner Bauschutt") === 0 || mat.indexOf("Erdaushub") === 0) {
-        const p = PAUSCHALEN[gr];
-        document.getElementById("live-brutto").innerText = fmt(p.brutto) + " brutto";
-        document.getElementById("live-netto").innerText = fmt(p.netto) + " netto · Komplett-Pauschale";
-      } else {
-        const g = GEWICHT_PREISE[mat];
-        const tNetto = istMan ? 117.65 : 92.44;
-        const tBrutto = istMan ? 140.00 : 110.00;
-        document.getElementById("live-brutto").innerText = fmt(tBrutto) + " Transport + " + fmt(g.brutto) + "/to";
-        document.getElementById("live-netto").innerText = fmt(tNetto) + " netto Transport + " + fmt(g.netto) + " netto/to Entsorgung";
-      }
-    }
-
-    async function bestellungAbsenden() {
-      const name = document.getElementById("kunde-name").value.trim();
-      const tel = document.getElementById("telefon").value.trim();
-      const strasse = document.getElementById("strasse").value.trim();
-      const plzOrt = document.getElementById("plz-ort").value.trim();
-      const datumRaw = document.getElementById("wunsch-datum").value;
-
-      if (!name || !tel || !strasse || !plzOrt || !datumRaw) {
-        alert("Bitte füllen Sie alle Pflichtfelder (*) aus.");
-        return;
-      }
-      const d = datumRaw.split("-");
-      const wunschDatum = d.length === 3 ? (d[2] + "." + d[1] + "." + d[0]) : datumRaw;
-
-      const payload = {
-        action: "bestellung",
-        bestellArt: BESTELL_ART,
-        material: BESTELL_ART === "container" ? document.getElementById("mat-cont").value : document.getElementById("mat-schuett").value,
-        groesse: document.getElementById("groesse").value,
-        tonnen: document.getElementById("tonnen").value,
-        wunschDatum: wunschDatum,
-        zeitfenster: document.getElementById("zeitfenster").value,
-        kundeName: name,
-        telefon: tel,
-        email: document.getElementById("email").value.trim(),
-        strasse: strasse,
-        plzOrt: plzOrt,
-        stellplatz: document.getElementById("stellplatz").value,
-        hinweis: document.getElementById("hinweis").value.trim()
-      };
-
-      const btn = document.getElementById("btn-bestell-send");
-      btn.disabled = true;
-      btn.innerText = "⏳ Bestellung wird übermittelt...";
-
-      try {
-        const resp = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        });
-        const res = await resp.json();
-        if (!res.ok) throw new Error(res.error || "Fehler beim Bestellen");
-
-        document.getElementById("bestell-form").classList.add("hidden");
-        document.getElementById("bestell-done").classList.remove("hidden");
-        document.getElementById("bestell-done-msg").innerHTML =
-          `Vorgangsnummer: <b>${res.boxId}</b><br>Kalkulation: <b>${res.kalkulationText}</b><br><br>Im Kalender <b>Container</b> & im Kalle-Box-Log eingetragen!`;
-      } catch (err) {
-        alert("Fehler: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "✅ Verbindlich bestellen";
-      }
-    }
-
-    function resetBestellung() {
-      document.getElementById("bestell-done").classList.add("hidden");
-      document.getElementById("bestell-form").classList.remove("hidden");
-      ladeContainerListe();
-    }
-
-    window.onload = function() {
-      const morgen = new Date();
-      morgen.setDate(morgen.getDate() + 1);
-      document.getElementById("wunsch-datum").value = morgen.toISOString().split("T")[0];
-      berechnePreis();
-      initPad();
-      ladeContainerListe();
-    };
-  </script>
-</body>
-</html>
+  <!-- ANSICHT 3: INNERBETRIEBLICHER TRANSPORT (SKR TIEFBAU) -->
+  <div id
