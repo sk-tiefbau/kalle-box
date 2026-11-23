@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="manifest.json?v=3">
+  <link rel="manifest" href="manifest.json?v=4">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
   <title>Kalle Box – SK Erd- und Tiefbau GmbH</title>
   <style>
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: rgba(0,0,0,0.1); }
     html, body {
       width: 100%;
       margin: 0;
@@ -25,9 +25,6 @@
       color: #fff;
       padding: 14px 16px;
       border-bottom: 4px solid #f59e0b;
-      position: sticky;
-      top: 0;
-      z-index: 20;
     }
     .topbar h1 { margin: 0; font-size: 19px; display: flex; align-items: center; gap: 8px; }
     .topbar p { margin: 3px 0 0; font-size: 12.5px; color: #cbd5e1; }
@@ -39,9 +36,11 @@
       padding: 10px 12px 0;
       max-width: 680px;
       margin: 0 auto;
+      position: relative;
+      z-index: 50;
     }
     .nav-btn {
-      padding: 12px 6px;
+      padding: 14px 4px;
       border: 2px solid #cbd5e1;
       border-radius: 10px;
       background: #fff;
@@ -50,6 +49,8 @@
       color: #334155;
       cursor: pointer;
       text-align: center;
+      touch-action: manipulation;
+      -webkit-appearance: none;
     }
     .nav-btn.active {
       background: #0f172a;
@@ -66,6 +67,8 @@
       max-width: 680px;
       margin: 10px auto 28px;
       padding: 0 12px;
+      position: relative;
+      z-index: 10;
     }
     .card {
       background: #fff;
@@ -217,9 +220,9 @@
   </div>
 
   <div class="nav-tabs">
-    <button id="nav-abholung" class="nav-btn active" onclick="wechsleAnsicht('abholung')">✍️ Abholung</button>
-    <button id="nav-bestellung" class="nav-btn" onclick="wechsleAnsicht('bestellung')">📦 Bestellen</button>
-    <button id="nav-intern" class="nav-btn intern" onclick="wechsleAnsicht('intern')">🚛 SK-Intern</button>
+    <div id="nav-abholung" class="nav-btn active" role="button" tabindex="0">✍️ Abholung</div>
+    <div id="nav-bestellung" class="nav-btn" role="button" tabindex="0">📦 Bestellen</div>
+    <div id="nav-intern" class="nav-btn intern" role="button" tabindex="0">🚛 SK-Intern</div>
   </div>
 
   <!-- ANSICHT 1: ABHOLUNG & UNTERSCHRIFT -->
@@ -263,7 +266,7 @@
         <button type="button" class="btn-small" onclick="clearPad()">🗑️ Löschen</button>
       </div>
 
-      <button id="btn-abhol-send" class="btn-primary" onclick="abholungAbsenden()">✅ Abholung bestätigen & Beleg erstellen</button>
+      <button id="btn-abhol-send" type="button" class="btn-primary" onclick="abholungAbsenden()">✅ Abholung bestätigen & Beleg erstellen</button>
     </div>
 
     <div id="abhol-done" class="card success hidden">
@@ -366,7 +369,7 @@
         <label for="chk-agb" style="font-weight:normal; margin:0;">AGB & Befüllhinweise (5 Tage standzeitfrei, sortenrein bis Ladekante) akzeptiert.</label>
       </div>
 
-      <button id="btn-bestell-send" class="btn-primary" onclick="bestellungAbsenden()">✅ Verbindlich bestellen</button>
+      <button id="btn-bestell-send" type="button" class="btn-primary" onclick="bestellungAbsenden()">✅ Verbindlich bestellen</button>
     </div>
 
     <div id="bestell-done" class="card success hidden">
@@ -377,4 +380,477 @@
   </div>
 
   <!-- ANSICHT 3: INNERBETRIEBLICHER TRANSPORT (SKR TIEFBAU) -->
-  <div id
+  <div id="view-intern" class="wrap hidden">
+    <div id="intern-form" class="card">
+      <div class="info-pill">
+        <b>🚛 Innerbetrieblicher Transport-Lieferschein:</b><br>
+        Erstellt automatisch einen Lieferschein (PDF) auf SK-Briefbogen und legt ihn direkt im Projekt unter <b>05_Belege</b> sowie im Bautagebuch (<b>02_Berichte</b>) ab.
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin:0;">1. Bauprojekt / Kostenträger (26-NNN) *</label>
+        <button type="button" class="btn-small" onclick="ladeProjekteListe()">🔄 Projekte</button>
+      </div>
+      <select id="int-projekt">
+        <option value="Bauhof / Allgemein">⏳ Lade aktive Bauprojekte...</option>
+      </select>
+
+      <label>2. Fahrzeug *</label>
+      <select id="int-fahrzeug">
+        <option value="3-Achs Volvo">3-Achs Volvo (Abrollkipper)</option>
+        <option value="2-Achser MAN">2-Achser MAN (14 t)</option>
+        <option value="Multicar">Multicar</option>
+        <option value="Tieflader / Maschinentransport">Tieflader / Maschinentransport</option>
+      </select>
+
+      <label>3. Container / Aufbau *</label>
+      <select id="int-container">
+        <option value="10,0 m³ Container">10,0 m³ Container</option>
+        <option value="11,0 m³ Container">11,0 m³ Container</option>
+        <option value="14,0 m³ Container">14,0 m³ Container</option>
+        <option value="5,0 m³ Container">5,0 m³ Container</option>
+        <option value="3,5 m³ Container">3,5 m³ Container</option>
+        <option value="2,5 m³ Container">2,5 m³ Container</option>
+        <option value="Kipper / Pritsche">Kipper / Pritsche (ohne Container)</option>
+      </select>
+
+      <label>4. Beladestelle (Von) *</label>
+      <input type="text" id="int-quelle" value="Bauhof Pegau" placeholder="z. B. Bauhof Pegau / Mischwerk">
+
+      <label>5. Entladestelle (Nach) *</label>
+      <input type="text" id="int-ziel" placeholder="Leer lassen = gewähltes Bauprojekt">
+
+      <label>6. Transportiertes Material *</label>
+      <input type="text" id="int-material" placeholder="z. B. Schotter 0/32, Erdaushub, Borde, Bagger">
+
+      <label>7. Menge / Fuhren *</label>
+      <input type="text" id="int-menge" value="1 Fuhre (ca. 12 to)" placeholder="z. B. 10 m³ / 12,5 to / 2 Fuhren">
+
+      <label>8. Fahrer *</label>
+      <select id="int-fahrer">
+        <option value="Tilo Keller">Tilo Keller</option>
+        <option value="Philipp Sturm">Philipp Sturm</option>
+        <option value="Frank Geißler">Frank Geißler</option>
+        <option value="Jürgen Gerhardt">Jürgen Gerhardt</option>
+        <option value="Thomas Schreiber">Thomas Schreiber</option>
+        <option value="Sören Grüneberg">Sören Grüneberg</option>
+      </select>
+
+      <label>9. Bemerkung (optional)</label>
+      <input type="text" id="int-bemerkung" placeholder="z. B. 2. Fuhre, abgestellt Einfahrt">
+
+      <button id="btn-intern-send" type="button" class="btn-primary btn-intern" onclick="internTransportAbsenden()">📄 Lieferschein erstellen & in 05_Belege ablegen</button>
+    </div>
+
+    <div id="intern-done" class="card success hidden">
+      <h2 style="color:#16a34a; margin-top:0;">✅ Lieferschein abgelegt!</h2>
+      <p id="intern-done-msg" style="font-size:16px; line-height:1.5;"></p>
+      <a id="intern-pdf-link" href="#" target="_blank" style="display:inline-block; background:#1d4ed8; color:#fff; padding:14px 20px; border-radius:10px; text-decoration:none; font-weight:bold; margin:10px 0;">📄 Lieferschein-PDF öffnen</a>
+      <br><br>
+      <button type="button" class="btn-small" onclick="resetIntern()">🔄 Nächster Transport</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzSI9HU8_1n223oiKVgtN0FiqwUJK-7XTvnmxOop2w7ZRJ_3NX5gorzP1iI3zyMCTE6/exec";
+
+    let CONTAINER_LISTE = [];
+    let PAD_KUNDE = null;
+    let BESTELL_ART = "container";
+
+    const PAUSCHALEN = {
+      "1,0 m³": { netto: 150.42, brutto: 179.00 },
+      "1,7 m³": { netto: 184.03, brutto: 219.00 },
+      "2,5 m³": { netto: 217.65, brutto: 259.00 },
+      "3,5 m³": { netto: 268.07, brutto: 319.00 },
+      "5,0 m³": { netto: 318.49, brutto: 379.00 }
+    };
+    const GEWICHT_PREISE = {
+      "Gemischte Bau- und Abbruchabfälle (AVV 170904)": { netto: 192.44, brutto: 229.00 },
+      "Sperrmüll (sortierfähig)": { netto: 192.44, brutto: 229.00 },
+      "Gips / Gasbeton rein sortiert (AVV 170802)": { netto: 108.40, brutto: 129.00 },
+      "Holz / Holzwerkstoffe Kat. A II - A III": { netto: 74.79, brutto: 89.00 },
+      "Kompostierbare Abfälle / Grünschnitt": { netto: 74.79, brutto: 89.00 },
+      "Wurzelholz / Baumstümpfe": { netto: 116.81, brutto: 139.00 }
+    };
+    const SCHUETTGUT = {
+      "Sand (0-2 / 0-4 mm)": 25.21,
+      "Mineralgemisch FSS B2 (0-32 mm)": 25.21,
+      "Mineralgemisch STS B1 (0-32 mm)": 26.89,
+      "Brechsand (0-2 mm)": 29.41,
+      "Oberboden gesiebt": 33.61,
+      "Splitt (2-5 mm)": 37.82
+    };
+
+    function wechsleAnsicht(tab) {
+      document.getElementById("nav-abholung").classList.toggle("active", tab === "abholung");
+      document.getElementById("nav-bestellung").classList.toggle("active", tab === "bestellung");
+      document.getElementById("nav-intern").classList.toggle("active", tab === "intern");
+      document.getElementById("view-abholung").classList.toggle("hidden", tab !== "abholung");
+      document.getElementById("view-bestellung").classList.toggle("hidden", tab !== "bestellung");
+      document.getElementById("view-intern").classList.toggle("hidden", tab !== "intern");
+      if (tab === "abholung") initPad();
+    }
+
+    // Direkte Klick- & Touch-Bindung für alle 3 Reiter
+    ["abholung", "bestellung", "intern"].forEach(function(tab) {
+      const el = document.getElementById("nav-" + tab);
+      el.addEventListener("click", function() { wechsleAnsicht(tab); });
+      el.addEventListener("touchend", function(e) {
+        e.preventDefault();
+        wechsleAnsicht(tab);
+      });
+    });
+
+    function initPad() {
+      const canvas = document.getElementById("pad-kunde");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      canvas.width = Math.max(rect.width, 280) * ratio;
+      canvas.height = 195 * ratio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(ratio, ratio);
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#0f172a";
+
+      let drawing = false;
+      let hasInk = false;
+
+      function getPos(e) {
+        const r = canvas.getBoundingClientRect();
+        const t = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
+        return { x: t.clientX - r.left, y: t.clientY - r.top };
+      }
+      function start(e) {
+        if (e.cancelable) e.preventDefault();
+        drawing = true;
+        const p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + 0.1, p.y + 0.1);
+        ctx.stroke();
+        hasInk = true;
+      }
+      function move(e) {
+        if (!drawing) return;
+        if (e.cancelable) e.preventDefault();
+        const p = getPos(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        hasInk = true;
+      }
+      function end() { drawing = false; }
+
+      canvas.onpointerdown = start;
+      canvas.onpointermove = move;
+      window.onpointerup = end;
+      canvas.ontouchstart = start;
+      canvas.ontouchmove = move;
+      canvas.ontouchend = end;
+
+      PAD_KUNDE = {
+        isEmpty: () => !hasInk,
+        clear: () => {
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+          hasInk = false;
+        },
+        toDataUrl: () => canvas.toDataURL("image/png")
+      };
+    }
+
+    function clearPad() { if (PAD_KUNDE) PAD_KUNDE.clear(); }
+
+    async function ladeContainerListe() {
+      const sel = document.getElementById("sel-box");
+      sel.innerHTML = '<option value="">⏳ Lade aktive Container...</option>';
+      try {
+        const resp = await fetch(API_URL + "?mode=list");
+        const data = await resp.json();
+        CONTAINER_LISTE = data.items || [];
+        if (CONTAINER_LISTE.length === 0) {
+          sel.innerHTML = '<option value="">Keine aktiven Container draußen gefunden</option>';
+          document.getElementById("box-details").classList.add("hidden");
+          return;
+        }
+        sel.innerHTML = CONTAINER_LISTE.map((c, i) =>
+          `<option value="${i}">${c.boxId} · ${c.baustelle} (${c.groesse})</option>`
+        ).join("");
+        zeigeContainerDetails();
+      } catch (e) {
+        sel.innerHTML = '<option value="">⚠️ Verbindung prüfen & Aktualisieren tippen</option>';
+      }
+    }
+
+    async function ladeProjekteListe() {
+      const sel = document.getElementById("int-projekt");
+      sel.innerHTML = '<option value="Bauhof / Allgemein">⏳ Lade aktive Bauprojekte...</option>';
+      try {
+        const resp = await fetch(API_URL + "?mode=projekte");
+        const data = await resp.json();
+        const projekte = data.projekte || [];
+        let html = '<option value="Bauhof / Allgemein">Bauhof Pegau / Allgemein (ohne Projekt)</option>';
+        projekte.forEach(p => {
+          html += `<option value="${p.id}||${p.name}">${p.name}</option>`;
+        });
+        sel.innerHTML = html;
+      } catch (e) {
+        sel.innerHTML = '<option value="Bauhof / Allgemein">Bauhof Pegau / Allgemein (Projekte neu laden)</option>';
+      }
+    }
+
+    function zeigeContainerDetails() {
+      const idx = document.getElementById("sel-box").value;
+      const box = document.getElementById("box-details");
+      if (idx === "" || !CONTAINER_LISTE[idx]) {
+        box.classList.add("hidden");
+        return;
+      }
+      const c = CONTAINER_LISTE[idx];
+      box.classList.remove("hidden");
+      box.innerHTML = `<b>${c.boxId}</b> · Gestellt am <b>${c.datum}</b> (${c.tage} Tage)<br>` +
+                      `📍 <b>${c.baustelle}</b><br>` +
+                      `📦 ${c.groesse} · ${c.material} (${c.fahrzeug})`;
+    }
+
+    async function abholungAbsenden() {
+      const idx = document.getElementById("sel-box").value;
+      if (idx === "" || !CONTAINER_LISTE[idx]) {
+        alert("Bitte zuerst einen Container auswählen.");
+        return;
+      }
+      if (!PAD_KUNDE || PAD_KUNDE.isEmpty()) {
+        alert("Bitte lassen Sie den Kunden auf dem Display unterschreiben.");
+        return;
+      }
+      const c = CONTAINER_LISTE[idx];
+      const payload = {
+        action: "abholung",
+        rowIndex: c.rowIndex,
+        boxId: c.boxId,
+        gewichtTo: document.getElementById("gewicht").value.trim(),
+        bemerkung: document.getElementById("bemerkung").value.trim(),
+        email: document.getElementById("kunde-mail").value.trim(),
+        fahrer: document.getElementById("fahrer").value,
+        sigKunde: PAD_KUNDE.toDataUrl()
+      };
+
+      const btn = document.getElementById("btn-abhol-send");
+      btn.disabled = true;
+      btn.innerText = "⏳ Erstelle PDF & speichere...";
+
+      try {
+        const resp = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (!res.ok) throw new Error(res.error || "Fehler beim Speichern");
+
+        document.getElementById("abhol-form").classList.add("hidden");
+        document.getElementById("abhol-done").classList.remove("hidden");
+        document.getElementById("abhol-done-msg").innerHTML =
+          `Container <b>${res.boxId}</b> wurde als abgeholt verbucht und im Ordner <b>Entsorgung</b> abgelegt.`;
+        document.getElementById("abhol-pdf-link").href = res.pdfUrl;
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "✅ Abholung bestätigen & Beleg erstellen";
+      }
+    }
+
+    function resetAbholung() {
+      document.getElementById("abhol-done").classList.add("hidden");
+      document.getElementById("abhol-form").classList.remove("hidden");
+      clearPad();
+      ladeContainerListe();
+    }
+
+    function setBestellArt(art) {
+      BESTELL_ART = art;
+      document.getElementById("sub-cont").classList.toggle("active", art === "container");
+      document.getElementById("sub-schuett").classList.toggle("active", art === "schuettgut");
+      document.getElementById("grp-cont").classList.toggle("hidden", art !== "container");
+      document.getElementById("grp-schuett").classList.toggle("hidden", art !== "schuettgut");
+      berechnePreis();
+    }
+
+    function fmt(n) { return n.toFixed(2).replace(".", ",") + " €"; }
+
+    function berechnePreis() {
+      if (BESTELL_ART === "schuettgut") {
+        const mat = document.getElementById("mat-schuett").value;
+        const to = Math.max(0.5, parseFloat(document.getElementById("tonnen").value) || 1);
+        const transp = to > 4.5 ? 58.82 : 46.22;
+        const netto = (to * SCHUETTGUT[mat]) + transp;
+        document.getElementById("live-brutto").innerText = fmt(netto * 1.19) + " brutto";
+        document.getElementById("live-netto").innerText = fmt(netto) + " netto · inkl. " + to.toFixed(1).replace(".", ",") + " to & Anfahrt";
+        return;
+      }
+      const mat = document.getElementById("mat-cont").value;
+      const gr = document.getElementById("groesse").value;
+      const istMan = (gr === "3,5 m³" || gr === "5,0 m³");
+      if (mat.indexOf("Reiner Bauschutt") === 0 || mat.indexOf("Erdaushub") === 0) {
+        const p = PAUSCHALEN[gr];
+        document.getElementById("live-brutto").innerText = fmt(p.brutto) + " brutto";
+        document.getElementById("live-netto").innerText = fmt(p.netto) + " netto · Komplett-Pauschale";
+      } else {
+        const g = GEWICHT_PREISE[mat];
+        const tNetto = istMan ? 117.65 : 92.44;
+        const tBrutto = istMan ? 140.00 : 110.00;
+        document.getElementById("live-brutto").innerText = fmt(tBrutto) + " Transport + " + fmt(g.brutto) + "/to";
+        document.getElementById("live-netto").innerText = fmt(tNetto) + " netto Transport + " + fmt(g.netto) + " netto/to Entsorgung";
+      }
+    }
+
+    async function bestellungAbsenden() {
+      const name = document.getElementById("kunde-name").value.trim();
+      const tel = document.getElementById("telefon").value.trim();
+      const strasse = document.getElementById("strasse").value.trim();
+      const plzOrt = document.getElementById("plz-ort").value.trim();
+      const datumRaw = document.getElementById("wunsch-datum").value;
+
+      if (!name || !tel || !strasse || !plzOrt || !datumRaw) {
+        alert("Bitte füllen Sie alle Pflichtfelder (*) aus.");
+        return;
+      }
+      const d = datumRaw.split("-");
+      const wunschDatum = d.length === 3 ? (d[2] + "." + d[1] + "." + d[0]) : datumRaw;
+
+      const payload = {
+        action: "bestellung",
+        bestellArt: BESTELL_ART,
+        material: BESTELL_ART === "container" ? document.getElementById("mat-cont").value : document.getElementById("mat-schuett").value,
+        groesse: document.getElementById("groesse").value,
+        tonnen: document.getElementById("tonnen").value,
+        wunschDatum: wunschDatum,
+        zeitfenster: document.getElementById("zeitfenster").value,
+        kundeName: name,
+        telefon: tel,
+        email: document.getElementById("email").value.trim(),
+        strasse: strasse,
+        plzOrt: plzOrt,
+        stellplatz: document.getElementById("stellplatz").value,
+        hinweis: document.getElementById("hinweis").value.trim()
+      };
+
+      const btn = document.getElementById("btn-bestell-send");
+      btn.disabled = true;
+      btn.innerText = "⏳ Bestellung wird übermittelt...";
+
+      try {
+        const resp = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (!res.ok) throw new Error(res.error || "Fehler beim Bestellen");
+
+        document.getElementById("bestell-form").classList.add("hidden");
+        document.getElementById("bestell-done").classList.remove("hidden");
+        document.getElementById("bestell-done-msg").innerHTML =
+          `Vorgangsnummer: <b>${res.boxId}</b><br>Kalkulation: <b>${res.kalkulationText}</b><br><br>Im Kalender <b>Container</b> & im Kalle-Box-Log eingetragen!`;
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "✅ Verbindlich bestellen";
+      }
+    }
+
+    function resetBestellung() {
+      document.getElementById("bestell-done").classList.add("hidden");
+      document.getElementById("bestell-form").classList.remove("hidden");
+      ladeContainerListe();
+    }
+
+    async function internTransportAbsenden() {
+      const projVal = document.getElementById("int-projekt").value;
+      const quelle = document.getElementById("int-quelle").value.trim();
+      const material = document.getElementById("int-material").value.trim();
+      const menge = document.getElementById("int-menge").value.trim();
+
+      if (!quelle || !material || !menge) {
+        alert("Bitte Beladestelle, Material und Menge ausfüllen.");
+        return;
+      }
+
+      let projektFolderId = "";
+      let projektName = "Bauhof / Allgemein";
+      if (projVal.indexOf("||") !== -1) {
+        const parts = projVal.split("||");
+        projektFolderId = parts[0];
+        projektName = parts[1];
+      }
+
+      const zielInput = document.getElementById("int-ziel").value.trim();
+      const payload = {
+        action: "intern_transport",
+        projektFolderId: projektFolderId,
+        projektName: projektName,
+        fahrzeug: document.getElementById("int-fahrzeug").value,
+        containerGroesse: document.getElementById("int-container").value,
+        quelle: quelle,
+        ziel: zielInput || projektName,
+        material: material,
+        menge: menge,
+        fahrer: document.getElementById("int-fahrer").value,
+        bemerkung: document.getElementById("int-bemerkung").value.trim()
+      };
+
+      const btn = document.getElementById("btn-intern-send");
+      btn.disabled = true;
+      btn.innerText = "⏳ Erstelle Lieferschein & lege in 05_Belege ab...";
+
+      try {
+        const resp = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (!res.ok) throw new Error(res.error || "Fehler beim Speichern");
+
+        document.getElementById("intern-form").classList.add("hidden");
+        document.getElementById("intern-done").classList.remove("hidden");
+        document.getElementById("intern-done-msg").innerHTML =
+          `Innerbetrieblicher Lieferschein <b>${res.boxId}</b> wurde erstellt!<br>` +
+          `Projekt: <b>${res.projektName}</b><br><br>` +
+          `Das Lieferschein-PDF liegt jetzt automatisch im Projektordner unter <b>05_Belege</b> und ist im Bautagebuch (<b>02_Berichte</b>) vermerkt.`;
+        document.getElementById("intern-pdf-link").href = res.pdfUrl;
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "📄 Lieferschein erstellen & in 05_Belege ablegen";
+      }
+    }
+
+    function resetIntern() {
+      document.getElementById("intern-done").classList.add("hidden");
+      document.getElementById("intern-form").classList.remove("hidden");
+      document.getElementById("int-material").value = "";
+      document.getElementById("int-bemerkung").value = "";
+    }
+
+    window.onload = function() {
+      const morgen = new Date();
+      morgen.setDate(morgen.getDate() + 1);
+      document.getElementById("wunsch-datum").value = morgen.toISOString().split("T")[0];
+      berechnePreis();
+      initPad();
+      ladeContainerListe();
+      ladeProjekteListe();
+    };
+  </script>
+</body>
+</html>
