@@ -270,3 +270,876 @@
     .sub-btn.active {
       background: #f59e0b;
       border-color: #d97706;
+      color: #0f172a;
+    }
+
+    .agb-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 16px;
+      font-size: 13.5px;
+      color: #334155;
+      line-height: 1.4;
+    }
+    .agb-row input { width: 24px; height: 24px; flex-shrink: 0; margin-top: 2px; accent-color: #16a34a; }
+
+    .hidden { display: none !important; }
+    .success { text-align: center; padding: 22px 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1>🚛 Kalle Box V2 – Container, GPS & Transport</h1>
+    <p>SK Erd- und Tiefbau GmbH · Pegau</p>
+  </div>
+
+  <div class="nav-tabs">
+    <div id="nav-abholung" class="nav-btn active" role="button" tabindex="0">✍️ Abholung</div>
+    <div id="nav-bestellung" class="nav-btn" role="button" tabindex="0">📦 Bestellen</div>
+    <div id="nav-intern" class="nav-btn intern" role="button" tabindex="0">🚛 SK-Intern</div>
+  </div>
+
+  <!-- ANSICHT 1: ABHOLUNG & UNTERSCHRIFT -->
+  <div id="view-abholung" class="wrap">
+    <div id="abhol-form" class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin:0;">1. Offenen Container wählen *</label>
+        <button type="button" class="btn-small" onclick="ladeContainerListe()">🔄 Aktualisieren</button>
+      </div>
+      <select id="sel-box" onchange="zeigeContainerDetails()">
+        <option value="">⏳ Lade aktive Container...</option>
+      </select>
+
+      <div id="box-details" class="info-pill hidden"></div>
+
+      <label>2. Gewicht laut Wiegeschein in Tonnen (optional)</label>
+      <input type="number" id="gewicht" step="0.05" min="0" inputmode="decimal" placeholder="z. B. 3,45 (leer lassen bei Pauschale)">
+
+      <label>3. Zustand / Bemerkung bei Abholung</label>
+      <input type="text" id="bemerkung" value="Container sortenrein und bis max. Ladekante beladen">
+
+      <label>4. E-Mail-Adresse Kunde (für sofortigen PDF-Beleg)</label>
+      <input type="email" id="kunde-mail" placeholder="kunde@beispiel.de">
+
+      <label>5. Fahrer (SK Erd- und Tiefbau GmbH)</label>
+      <select id="fahrer">
+        <option value="Tilo Keller">Tilo Keller</option>
+        <option value="Philipp Sturm">Philipp Sturm</option>
+        <option value="Jürgen Gerhardt">Jürgen Gerhardt</option>
+        <option value="Thomas Schreiber">Thomas Schreiber</option>
+        <option value="Frank Geißler">Frank Geißler</option>
+        <option value="Sören Grüneberg">Sören Grüneberg</option>
+      </select>
+
+      <label>6. Unterschrift Kunde / Baustelle (mit Finger) *</label>
+      <div class="sig-box">
+        <canvas id="pad-kunde"></canvas>
+      </div>
+      <div class="sig-actions">
+        <span>Bitte im Feld oben unterschreiben</span>
+        <button type="button" class="btn-small" onclick="clearPad()">🗑️ Löschen</button>
+      </div>
+
+      <button id="btn-abhol-send" type="button" class="btn-primary" onclick="abholungAbsenden()">✅ Abholung bestätigen & Beleg erstellen</button>
+    </div>
+
+    <div id="abhol-done" class="card success hidden">
+      <h2 style="color:#16a34a; margin-top:0;">✅ Abholung gebucht!</h2>
+      <p id="abhol-done-msg" style="font-size:16px; line-height:1.5;"></p>
+      <a id="abhol-pdf-link" href="#" target="_blank" style="display:inline-block; background:#0f172a; color:#fff; padding:14px 20px; border-radius:10px; text-decoration:none; font-weight:bold; margin:10px 0;">📄 Unterschriebenes PDF öffnen</a>
+      <br><br>
+      <button type="button" class="btn-small" onclick="resetAbholung()">🔄 Nächste Abholung</button>
+    </div>
+  </div>
+
+  <!-- ANSICHT 2: NEUE KUNDEN-BESTELLUNG -->
+  <div id="view-bestellung" class="wrap hidden">
+    <div id="bestell-form" class="card">
+      <div class="sub-tabs">
+        <div id="sub-cont" class="sub-btn active" onclick="setBestellArt('container')">📦 Container</div>
+        <div id="sub-schuett" class="sub-btn" onclick="setBestellArt('schuettgut')">⛰️ Schüttgut</div>
+      </div>
+
+      <div id="grp-cont">
+        <label>1. Material / Abfallart *</label>
+        <select id="mat-cont" onchange="berechnePreis()">
+          <option value="Reiner Bauschutt (Ziegel, Beton, Fliesen – AVV 170107)">Reiner Bauschutt (Pauschalpreis)</option>
+          <option value="Erdaushub / Boden / Lehm (AVV 170504)">Erdaushub / Boden / Lehm (Pauschalpreis)</option>
+          <option value="Gemischte Bau- und Abbruchabfälle (AVV 170904)">Gemischte Bauabfälle (nach Gewicht)</option>
+          <option value="Sperrmüll (sortierfähig)">Sperrmüll sortierfähig (nach Gewicht)</option>
+          <option value="Gips / Gasbeton rein sortiert (AVV 170802)">Gips / Gasbeton rein (nach Gewicht)</option>
+          <option value="Holz / Holzwerkstoffe Kat. A II - A III">Altholz Kat. A II – A III (nach Gewicht)</option>
+          <option value="Kompostierbare Abfälle / Grünschnitt">Grünschnitt / Gartenabfälle (nach Gewicht)</option>
+          <option value="Wurzelholz / Baumstümpfe">Wurzelholz / Baumstümpfe (nach Gewicht)</option>
+        </select>
+
+        <label>2. Containergröße *</label>
+        <select id="groesse" onchange="berechnePreis()">
+          <option value="1,0 m³">1,0 m³ – Multicar (max. 1,7 to)</option>
+          <option value="1,7 m³">1,7 m³ – Multicar (max. 3,5 to)</option>
+          <option value="2,5 m³" selected>2,5 m³ – Multicar (max. 4,5 to)</option>
+          <option value="3,5 m³">3,5 m³ – 2-Achser MAN (max. 6,0 to)</option>
+          <option value="5,0 m³">5,0 m³ – 2-Achser MAN (max. 8,0 to)</option>
+        </select>
+      </div>
+
+      <div id="grp-schuett" class="hidden">
+        <label>1. Schüttgut / Baustoff *</label>
+        <select id="mat-schuett" onchange="berechnePreis()">
+          <option value="Sand (0-2 / 0-4 mm)">Sand 0–2 / 0–4 mm (30,00 €/to brutto)</option>
+          <option value="Mineralgemisch FSS B2 (0-32 mm)">Mineralgemisch FSS B2 0–32 mm (30,00 €/to brutto)</option>
+          <option value="Mineralgemisch STS B1 (0-32 mm)">Mineralgemisch STS B1 0–32 mm (32,00 €/to brutto)</option>
+          <option value="Brechsand (0-2 mm)">Brechsand 0–2 mm (35,00 €/to brutto)</option>
+          <option value="Oberboden gesiebt">Oberboden gesiebt (40,00 €/to brutto)</option>
+          <option value="Splitt (2-5 mm)">Splitt 2–5 mm (45,00 €/to brutto)</option>
+        </select>
+
+        <label>2. Menge in Tonnen (max. 8,0 to) *</label>
+        <input type="number" id="tonnen" value="3.0" min="1" max="8" step="0.5" inputmode="decimal" oninput="berechnePreis()">
+      </div>
+
+      <div class="price-card">
+        <div class="price-title">Kalkulierter Preis (Umkreis 15 km Pegau)</div>
+        <div class="price-val" id="live-brutto">259,00 € brutto</div>
+        <div class="price-sub" id="live-netto">217,65 € netto · Pauschale inkl. Stellung & Abholung</div>
+      </div>
+
+      <label>3. Wunschtermin *</label>
+      <input type="date" id="wunsch-datum">
+
+      <label>Zeitfenster</label>
+      <select id="zeitfenster">
+        <option value="Vormittags (07:30 – 12:00 Uhr)">Vormittags (07:30 – 12:00 Uhr)</option>
+        <option value="Nachmittags (12:00 – 16:00 Uhr)">Nachmittags (12:00 – 16:00 Uhr)</option>
+        <option value="Ganztägig flexibel">Ganztägig flexibel</option>
+      </select>
+
+      <label>Name / Firma / Baustelle *</label>
+      <input type="text" id="kunde-name" placeholder="Max Mustermann / BV Pegau">
+
+      <label>Telefon *</label>
+      <input type="tel" id="telefon" placeholder="0171 / ...">
+
+      <label>E-Mail-Adresse (optional)</label>
+      <input type="email" id="email" placeholder="kunde@beispiel.de">
+
+      <label>Lieferstraße & Hausnummer *</label>
+      <input type="text" id="strasse" placeholder="Musterstraße 12">
+
+      <label>PLZ & Ort *</label>
+      <input type="text" id="plz-ort" placeholder="04523 Pegau">
+
+      <label>Abstellort</label>
+      <select id="stellplatz">
+        <option value="Privatgrundstück / Einfahrt">Privatgrundstück / Einfahrt</option>
+        <option value="Öffentliche Straße / Gehweg">Öffentliche Straße / Gehweg</option>
+      </select>
+
+      <label>Hinweis für Fahrer (optional)</label>
+      <input type="text" id="hinweis" placeholder="z. B. Einfahrt rechts">
+
+      <div class="agb-row">
+        <input type="checkbox" id="chk-agb" checked>
+        <label for="chk-agb" style="font-weight:normal; margin:0;">AGB & Befüllhinweise (5 Tage standzeitfrei, sortenrein bis Ladekante) akzeptiert.</label>
+      </div>
+
+      <button id="btn-bestell-send" type="button" class="btn-primary" onclick="bestellungAbsenden()">✅ Verbindlich bestellen</button>
+    </div>
+
+    <div id="bestell-done" class="card success hidden">
+      <h2 style="color:#16a34a; margin-top:0;">✅ Bestellung erfasst!</h2>
+      <p id="bestell-done-msg" style="font-size:16px; line-height:1.5;"></p>
+      <button type="button" class="btn-small" onclick="resetBestellung()">🔄 Weitere Bestellung</button>
+    </div>
+  </div>
+
+  <!-- ANSICHT 3: INNERBETRIEBLICHER TRANSPORT (SK-INTERN V2 MIT GPS, FOTO & ZEITABRECHNUNG) -->
+  <div id="view-intern" class="wrap hidden">
+    <div id="intern-form" class="card">
+      <div class="info-pill">
+        <b>🚛 SK-Intern & Pendelverkehr V2:</b><br>
+        Tippe beim Beladen auf <b>GPS: Laden</b> und beim Abkippen auf <b>GPS: Kippen</b>. Umlaufzeit, Menge und Lieferschein-PDF werden automatisch berechnet und in <b>05_Belege</b> abgelegt.
+      </div>
+
+      <div class="gps-grid">
+        <button type="button" class="gps-btn gps-start" onclick="erfasseGps('laden')">
+          📍 GPS: Laden / Abholen
+          <span id="gps-laden-info" class="gps-status">Noch nicht erfasst</span>
+        </button>
+        <button type="button" class="gps-btn gps-end" onclick="erfasseGps('kippen')">
+          📍 GPS: Kippen / Absetzen
+          <span id="gps-kippen-info" class="gps-status">Noch nicht erfasst</span>
+        </button>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin:0;">1. Bauprojekt / Kostenträger (26-NNN) *</label>
+        <button type="button" class="btn-small" onclick="ladeProjekteListe()">🔄 Projekte</button>
+      </div>
+      <select id="int-projekt" onchange="berechneInternLive()">
+        <option value="Bauhof / Allgemein">⏳ Lade aktive Bauprojekte...</option>
+      </select>
+
+      <label>2. Fahrzeug *</label>
+      <select id="int-fahrzeug" onchange="berechneInternLive()">
+        <option value="3-Achs Volvo">3-Achs Volvo (Abrollkipper · 95 €/h)</option>
+        <option value="2-Achser MAN">2-Achser MAN (14 t · 78 €/h)</option>
+        <option value="Multicar">Multicar (62 €/h)</option>
+        <option value="Tieflader / Maschinentransport">Tieflader / Maschinentransport (105 €/h)</option>
+      </select>
+
+      <label>3. Container / Aufbau *</label>
+      <select id="int-container" onchange="berechneFuellstand()">
+        <option value="10,0 m³ Container">10,0 m³ Container</option>
+        <option value="11,0 m³ Container">11,0 m³ Container</option>
+        <option value="14,0 m³ Container">14,0 m³ Container</option>
+        <option value="5,0 m³ Container">5,0 m³ Container</option>
+        <option value="3,5 m³ Container">3,5 m³ Container</option>
+        <option value="2,5 m³ Container">2,5 m³ Container</option>
+        <option value="Kipper / Pritsche">Kipper / Pritsche (12,0 m³)</option>
+      </select>
+
+      <label>4. Beladestelle (Von) *</label>
+      <input type="text" id="int-quelle" value="Bauhof Pegau" placeholder="z. B. Bauhof Pegau">
+      <div class="fav-row">
+        <button type="button" class="fav-chip" onclick="setOrt('int-quelle','Bauhof Pegau')">🏠 Bauhof Pegau</button>
+        <button type="button" class="fav-chip" onclick="setOrtProjekt('int-quelle')">🏗️ Baustelle</button>
+      </div>
+
+      <label>5. Entladestelle (Nach) *</label>
+      <input type="text" id="int-ziel" placeholder="Leer lassen = gewähltes Bauprojekt">
+      <div class="fav-row">
+        <button type="button" class="fav-chip" onclick="setOrtProjekt('int-ziel')">🏗️ Baustelle</button>
+        <button type="button" class="fav-chip" onclick="setOrt('int-ziel','Kippstelle Backhaus Hennig (Rüssen)')">⛰️ Kippstelle Rüssen</button>
+        <button type="button" class="fav-chip" onclick="setOrt('int-ziel','Bauhof Pegau')">🏠 Bauhof Pegau</button>
+      </div>
+
+      <label>6. Transportiertes Material *</label>
+      <input type="text" id="int-material" value="Frostschutz 0/32" oninput="berechneFuellstand()" placeholder="z. B. Frostschutz 0/32, Bodenaushub, Bauschutt">
+      <div class="fav-row">
+        <button type="button" class="fav-chip" onclick="setMat('Frostschutz 0/32')">Frostschutz 0/32</button>
+        <button type="button" class="fav-chip" onclick="setMat('Bodenaushub')">Bodenaushub</button>
+        <button type="button" class="fav-chip" onclick="setMat('Bauschutt')">Bauschutt</button>
+      </div>
+
+      <label>Füllgrad (automatische m³ / t Schätzung)</label>
+      <div class="fill-row">
+        <button type="button" class="fill-btn" onclick="setFuellgrad(0.25, this)">25%</button>
+        <button type="button" class="fill-btn" onclick="setFuellgrad(0.50, this)">50%</button>
+        <button type="button" class="fill-btn" onclick="setFuellgrad(0.75, this)">75%</button>
+        <button type="button" class="fill-btn active" onclick="setFuellgrad(1.00, this)">100%</button>
+        <button type="button" class="fill-btn" onclick="setFuellgrad(1.10, this)">Gehäuft</button>
+      </div>
+
+      <label>7. Menge / Fuhren *</label>
+      <input type="text" id="int-menge" value="10,0 m³ (ca. 21,0 to · 1 Fuhre)">
+
+      <label>Abrechnungsart & Umlaufzeit (Std.)</label>
+      <div style="display:grid; grid-template-columns: 1.3fr 0.7fr; gap:8px;">
+        <select id="int-abrechnung" onchange="berechneInternLive()">
+          <option value="zeit">Nach Zeit (LKW-Std.)</option>
+          <option value="pauschal">Fuhrenpauschale</option>
+        </select>
+        <input type="number" id="int-stunden" value="1.0" min="0.25" max="12" step="0.25" inputmode="decimal" oninput="berechneInternLive()">
+      </div>
+
+      <label>8. Fahrer *</label>
+      <select id="int-fahrer">
+        <option value="Tilo Keller">Tilo Keller</option>
+        <option value="Philipp Sturm">Philipp Sturm</option>
+        <option value="Frank Geißler">Frank Geißler</option>
+        <option value="Jürgen Gerhardt">Jürgen Gerhardt</option>
+        <option value="Thomas Schreiber">Thomas Schreiber</option>
+        <option value="Sören Grüneberg">Sören Grüneberg</option>
+      </select>
+
+      <label>9. Bemerkung (optional)</label>
+      <input type="text" id="int-bemerkung" placeholder="z. B. 2. Fuhre, abgestellt Einfahrt">
+
+      <label>📸 Foto von Mulde / Ladung / Stellplatz (optional)</label>
+      <div class="cam-box">
+        <label for="int-foto-input" class="cam-btn" style="margin:0;">📷 Kamera öffnen / Foto wählen</label>
+        <input type="file" id="int-foto-input" accept="image/*" capture="environment" style="display:none;" onchange="verarbeiteFotoInput(this)">
+        <div id="foto-status" style="font-size:12.5px; color:#475569; margin-top:6px;">Kein Foto ausgewählt</div>
+      </div>
+
+      <div class="price-card" style="background:#eff6ff; border-color:#93c5fd;">
+        <div class="price-title" style="color:#1e40af;">Interne Projekt-Verrechnung (SK-Intern)</div>
+        <div class="price-val" id="int-live-wert">95,00 € netto</div>
+        <div class="price-sub" id="int-live-sub">1,00 Std. × 95,00 €/h (3-Achs Volvo inkl. Fahrer)</div>
+      </div>
+
+      <button id="btn-intern-send" type="button" class="btn-primary btn-intern" onclick="internTransportAbsenden()">📄 Lieferschein erstellen & in 05_Belege ablegen</button>
+    </div>
+
+    <div id="intern-done" class="card success hidden">
+      <h2 style="color:#16a34a; margin-top:0;">✅ Lieferschein abgelegt!</h2>
+      <p id="intern-done-msg" style="font-size:16px; line-height:1.5;"></p>
+      <a id="intern-pdf-link" href="#" target="_blank" style="display:inline-block; background:#1d4ed8; color:#fff; padding:14px 20px; border-radius:10px; text-decoration:none; font-weight:bold; margin:10px 0;">📄 Lieferschein-PDF öffnen</a>
+      <br><br>
+      <button type="button" class="btn-small" onclick="resetIntern()">🔄 Nächster Transport</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzSI9HU8_1n223oiKVgtN0FiqwUJK-7XTvnmxOop2w7ZRJ_3NX5gorzP1iI3zyMCTE6/exec";
+
+    let CONTAINER_LISTE = [];
+    let PAD_KUNDE = null;
+    let BESTELL_ART = "container";
+    let FUELL_FAKTOR = 1.00;
+    let FOTO_DATA_URL = "";
+    let GPS_STATE = { laden: null, kippen: null };
+
+    const PAUSCHALEN = {
+      "1,0 m³": { netto: 150.42, brutto: 179.00 },
+      "1,7 m³": { netto: 184.03, brutto: 219.00 },
+      "2,5 m³": { netto: 217.65, brutto: 259.00 },
+      "3,5 m³": { netto: 268.07, brutto: 319.00 },
+      "5,0 m³": { netto: 318.49, brutto: 379.00 }
+    };
+    const GEWICHT_PREISE = {
+      "Gemischte Bau- und Abbruchabfälle (AVV 170904)": { netto: 192.44, brutto: 229.00 },
+      "Sperrmüll (sortierfähig)": { netto: 192.44, brutto: 229.00 },
+      "Gips / Gasbeton rein sortiert (AVV 170802)": { netto: 108.40, brutto: 129.00 },
+      "Holz / Holzwerkstoffe Kat. A II - A III": { netto: 74.79, brutto: 89.00 },
+      "Kompostierbare Abfälle / Grünschnitt": { netto: 74.79, brutto: 89.00 },
+      "Wurzelholz / Baumstümpfe": { netto: 116.81, brutto: 139.00 }
+    };
+    const SCHUETTGUT = {
+      "Sand (0-2 / 0-4 mm)": 25.21,
+      "Mineralgemisch FSS B2 (0-32 mm)": 25.21,
+      "Mineralgemisch STS B1 (0-32 mm)": 26.89,
+      "Brechsand (0-2 mm)": 29.41,
+      "Oberboden gesiebt": 33.61,
+      "Splitt (2-5 mm)": 37.82
+    };
+    const LKW_SAETZE = {
+      "3-Achs Volvo": 95.00,
+      "2-Achser MAN": 78.00,
+      "Multicar": 62.00,
+      "Tieflader / Maschinentransport": 105.00
+    };
+
+    function wechsleAnsicht(tab) {
+      document.getElementById("nav-abholung").classList.toggle("active", tab === "abholung");
+      document.getElementById("nav-bestellung").classList.toggle("active", tab === "bestellung");
+      document.getElementById("nav-intern").classList.toggle("active", tab === "intern");
+      document.getElementById("view-abholung").classList.toggle("hidden", tab !== "abholung");
+      document.getElementById("view-bestellung").classList.toggle("hidden", tab !== "bestellung");
+      document.getElementById("view-intern").classList.toggle("hidden", tab !== "intern");
+      if (tab === "abholung") initPad();
+      if (tab === "intern") {
+        berechneFuellstand();
+        berechneInternLive();
+      }
+    }
+
+    ["abholung", "bestellung", "intern"].forEach(function(tab) {
+      const el = document.getElementById("nav-" + tab);
+      el.addEventListener("click", function() { wechsleAnsicht(tab); });
+      el.addEventListener("touchend", function(e) {
+        e.preventDefault();
+        wechsleAnsicht(tab);
+      });
+    });
+
+    function erfasseGps(typ) {
+      const infoEl = document.getElementById(typ === "laden" ? "gps-laden-info" : "gps-kippen-info");
+      infoEl.innerText = "⏳ Ermittle Standort...";
+
+      const jetzt = new Date();
+      const zeitStr = jetzt.toTimeString().slice(0, 5);
+
+      const speicherePunkt = (coordsStr) => {
+        GPS_STATE[typ] = { ts: jetzt.getTime(), zeit: zeitStr, coords: coordsStr };
+        infoEl.innerText = "✔ " + zeitStr + " Uhr" + (coordsStr ? (" (" + coordsStr + ")") : " (Offline-Zeitstempel)");
+
+        if (typ === "laden" && coordsStr) {
+          document.getElementById("int-quelle").value = "GPS-Standort";
+        }
+        if (typ === "kippen" && coordsStr) {
+          document.getElementById("int-ziel").value = "GPS-Standort";
+        }
+
+        if (GPS_STATE.laden && GPS_STATE.kippen && GPS_STATE.kippen.ts >= GPS_STATE.laden.ts) {
+          const diffH = Math.max(0.25, Math.round(((GPS_STATE.kippen.ts - GPS_STATE.laden.ts) / 3600000) * 4) / 4);
+          document.getElementById("int-stunden").value = diffH.toFixed(2);
+          berechneInternLive();
+        }
+
+        try {
+          if (typ === "laden") localStorage.setItem("kalle_box_gps", JSON.stringify(GPS_STATE));
+          if (typ === "kippen") localStorage.removeItem("kalle_box_gps");
+        } catch (e) {}
+      };
+
+      if (!navigator.geolocation) {
+        speicherePunkt("");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        pos => speicherePunkt(pos.coords.latitude.toFixed(5) + "," + pos.coords.longitude.toFixed(5)),
+        () => speicherePunkt(""),
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    function setOrt(feldId, wert) {
+      document.getElementById(feldId).value = wert;
+    }
+
+    function setOrtProjekt(feldId) {
+      const val = document.getElementById("int-projekt").value;
+      const pName = val.indexOf("||") !== -1 ? val.split("||")[1] : val;
+      document.getElementById(feldId).value = pName;
+    }
+
+    function setMat(wert) {
+      document.getElementById("int-material").value = wert;
+      berechneFuellstand();
+    }
+
+    function setFuellgrad(faktor, btn) {
+      FUELL_FAKTOR = faktor;
+      document.querySelectorAll(".fill-btn").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      berechneFuellstand();
+    }
+
+    function berechneFuellstand() {
+      const cText = document.getElementById("int-container").value;
+      const mMatch = cText.match(/(\d+(?:[.,]\d+)?)/);
+      const maxM3 = mMatch ? parseFloat(mMatch[1].replace(",", ".")) : 10.0;
+      const m3 = Math.round(maxM3 * FUELL_FAKTOR * 10) / 10;
+
+      const matLow = document.getElementById("int-material").value.toLowerCase();
+      let dichte = 1.6;
+      if (matLow.indexOf("frost") !== -1 || matLow.indexOf("schotter") !== -1 || matLow.indexOf("kies") !== -1) dichte = 2.1;
+      else if (matLow.indexOf("bauschutt") !== -1 || matLow.indexOf("beton") !== -1) dichte = 1.5;
+      else if (matLow.indexOf("grün") !== -1 || matLow.indexOf("holz") !== -1) dichte = 0.5;
+
+      const tonnen = Math.round(m3 * dichte * 10) / 10;
+      document.getElementById("int-menge").value =
+        m3.toFixed(1).replace(".", ",") + " m³ (ca. " + tonnen.toFixed(1).replace(".", ",") + " to · 1 Fuhre)";
+    }
+
+    function berechneInternLive() {
+      const fz = document.getElementById("int-fahrzeug").value;
+      const art = document.getElementById("int-abrechnung").value;
+      const std = Math.max(0.25, parseFloat(document.getElementById("int-stunden").value) || 1.0);
+      const satz = LKW_SAETZE[fz] || 95.00;
+
+      if (art === "zeit") {
+        const summe = std * satz;
+        document.getElementById("int-live-wert").innerText = fmt(summe) + " netto";
+        document.getElementById("int-live-sub").innerText = std.toFixed(2).replace(".", ",") + " Std. × " + fmt(satz) + "/h (" + fz + " inkl. Fahrer)";
+      } else {
+        const pausch = fz.indexOf("Volvo") !== -1 ? 95.00 : (fz.indexOf("MAN") !== -1 ? 58.82 : 46.22);
+        document.getElementById("int-live-wert").innerText = fmt(pausch) + " netto";
+        document.getElementById("int-live-sub").innerText = "Fuhrenpauschale (" + fz + ")";
+      }
+    }
+
+    function verarbeiteFotoInput(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const statusEl = document.getElementById("foto-status");
+      statusEl.innerText = "⏳ Foto wird komprimiert...";
+
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement("canvas");
+          const maxW = 1200;
+          const scale = Math.min(1, maxW / img.width);
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          FOTO_DATA_URL = canvas.toDataURL("image/jpeg", 0.78);
+          statusEl.innerText = "✔ Foto bereit (" + file.name + ")";
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function initPad() {
+      const canvas = document.getElementById("pad-kunde");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      canvas.width = Math.max(rect.width, 280) * ratio;
+      canvas.height = 195 * ratio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(ratio, ratio);
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#0f172a";
+
+      let drawing = false;
+      let hasInk = false;
+
+      function getPos(e) {
+        const r = canvas.getBoundingClientRect();
+        const t = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
+        return { x: t.clientX - r.left, y: t.clientY - r.top };
+      }
+      function start(e) {
+        if (e.cancelable) e.preventDefault();
+        drawing = true;
+        const p = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + 0.1, p.y + 0.1);
+        ctx.stroke();
+        hasInk = true;
+      }
+      function move(e) {
+        if (!drawing) return;
+        if (e.cancelable) e.preventDefault();
+        const p = getPos(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        hasInk = true;
+      }
+      function end() { drawing = false; }
+
+      canvas.onpointerdown = start;
+      canvas.onpointermove = move;
+      window.onpointerup = end;
+      canvas.ontouchstart = start;
+      canvas.ontouchmove = move;
+      canvas.ontouchend = end;
+
+      PAD_KUNDE = {
+        isEmpty: () => !hasInk,
+        clear: () => {
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+          hasInk = false;
+        },
+        toDataUrl: () => canvas.toDataURL("image/png")
+      };
+    }
+
+    function clearPad() { if (PAD_KUNDE) PAD_KUNDE.clear(); }
+
+    async function ladeContainerListe() {
+      const sel = document.getElementById("sel-box");
+      sel.innerHTML = '<option value="">⏳ Lade aktive Container...</option>';
+      try {
+        const resp = await fetch(API_URL + "?mode=list");
+        const data = await resp.json();
+        CONTAINER_LISTE = data.items || [];
+        if (CONTAINER_LISTE.length === 0) {
+          sel.innerHTML = '<option value="">Keine aktiven Container draußen gefunden</option>';
+          document.getElementById("box-details").classList.add("hidden");
+          return;
+        }
+        sel.innerHTML = CONTAINER_LISTE.map((c, i) =>
+          `<option value="${i}">${c.boxId} · ${c.baustelle} (${c.groesse})</option>`
+        ).join("");
+        zeigeContainerDetails();
+      } catch (e) {
+        sel.innerHTML = '<option value="">⚠️ Verbindung prüfen & Aktualisieren tippen</option>';
+      }
+    }
+
+    async function ladeProjekteListe() {
+      const sel = document.getElementById("int-projekt");
+      sel.innerHTML = '<option value="Bauhof / Allgemein">⏳ Lade aktive Bauprojekte...</option>';
+      try {
+        const resp = await fetch(API_URL + "?mode=projekte");
+        const data = await resp.json();
+        const projekte = data.projekte || [];
+        let html = '<option value="Bauhof / Allgemein">Bauhof Pegau / Allgemein (ohne Projekt)</option>';
+        projekte.forEach(p => {
+          html += `<option value="${p.id}||${p.name}">${p.name}</option>`;
+        });
+        sel.innerHTML = html;
+      } catch (e) {
+        sel.innerHTML = '<option value="Bauhof / Allgemein">Bauhof Pegau / Allgemein (Projekte neu laden)</option>';
+      }
+    }
+
+    function zeigeContainerDetails() {
+      const idx = document.getElementById("sel-box").value;
+      const box = document.getElementById("box-details");
+      if (idx === "" || !CONTAINER_LISTE[idx]) {
+        box.classList.add("hidden");
+        return;
+      }
+      const c = CONTAINER_LISTE[idx];
+      box.classList.remove("hidden");
+      box.innerHTML = `<b>${c.boxId}</b> · Gestellt am <b>${c.datum}</b> (${c.tage} Tage)<br>` +
+                      `📍 <b>${c.baustelle}</b><br>` +
+                      `📦 ${c.groesse} · ${c.material} (${c.fahrzeug})`;
+    }
+
+    async function abholungAbsenden() {
+      const idx = document.getElementById("sel-box").value;
+      if (idx === "" || !CONTAINER_LISTE[idx]) {
+        alert("Bitte zuerst einen Container auswählen.");
+        return;
+      }
+      if (!PAD_KUNDE || PAD_KUNDE.isEmpty()) {
+        alert("Bitte lassen Sie den Kunden auf dem Display unterschreiben.");
+        return;
+      }
+      const c = CONTAINER_LISTE[idx];
+      const payload = {
+        action: "abholung",
+        rowIndex: c.rowIndex,
+        boxId: c.boxId,
+        gewichtTo: document.getElementById("gewicht").value.trim(),
+        bemerkung: document.getElementById("bemerkung").value.trim(),
+        email: document.getElementById("kunde-mail").value.trim(),
+        fahrer: document.getElementById("fahrer").value,
+        sigKunde: PAD_KUNDE.toDataUrl()
+      };
+
+      const btn = document.getElementById("btn-abhol-send");
+      btn.disabled = true;
+      btn.innerText = "⏳ Erstelle PDF & speichere...";
+
+      try {
+        const resp = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (!res.ok) throw new Error(res.error || "Fehler beim Speichern");
+
+        document.getElementById("abhol-form").classList.add("hidden");
+        document.getElementById("abhol-done").classList.remove("hidden");
+        document.getElementById("abhol-done-msg").innerHTML =
+          `Container <b>${res.boxId}</b> wurde als abgeholt verbucht und im Ordner <b>Entsorgung</b> abgelegt.`;
+        document.getElementById("abhol-pdf-link").href = res.pdfUrl;
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "✅ Abholung bestätigen & Beleg erstellen";
+      }
+    }
+
+    function resetAbholung() {
+      document.getElementById("abhol-done").classList.add("hidden");
+      document.getElementById("abhol-form").classList.remove("hidden");
+      clearPad();
+      ladeContainerListe();
+    }
+
+    function setBestellArt(art) {
+      BESTELL_ART = art;
+      document.getElementById("sub-cont").classList.toggle("active", art === "container");
+      document.getElementById("sub-schuett").classList.toggle("active", art === "schuettgut");
+      document.getElementById("grp-cont").classList.toggle("hidden", art !== "container");
+      document.getElementById("grp-schuett").classList.toggle("hidden", art !== "schuettgut");
+      berechnePreis();
+    }
+
+    function fmt(n) { return n.toFixed(2).replace(".", ",") + " €"; }
+
+    function berechnePreis() {
+      if (BESTELL_ART === "schuettgut") {
+        const mat = document.getElementById("mat-schuett").value;
+        const to = Math.max(0.5, parseFloat(document.getElementById("tonnen").value) || 1);
+        const transp = to > 4.5 ? 58.82 : 46.22;
+        const netto = (to * SCHUETTGUT[mat]) + transp;
+        document.getElementById("live-brutto").innerText = fmt(netto * 1.19) + " brutto";
+        document.getElementById("live-netto").innerText = fmt(netto) + " netto · inkl. " + to.toFixed(1).replace(".", ",") + " to & Anfahrt";
+        return;
+      }
+      const mat = document.getElementById("mat-cont").value;
+      const gr = document.getElementById("groesse").value;
+      const istMan = (gr === "3,5 m³" || gr === "5,0 m³");
+      if (mat.indexOf("Reiner Bauschutt") === 0 || mat.indexOf("Erdaushub") === 0) {
+        const p = PAUSCHALEN[gr];
+        document.getElementById("live-brutto").innerText = fmt(p.brutto) + " brutto";
+        document.getElementById("live-netto").innerText = fmt(p.netto) + " netto · Komplett-Pauschale";
+      } else {
+        const g = GEWICHT_PREISE[mat];
+        const tNetto = istMan ? 117.65 : 92.44;
+        const tBrutto = istMan ? 140.00 : 110.00;
+        document.getElementById("live-brutto").innerText = fmt(tBrutto) + " Transport + " + fmt(g.brutto) + "/to";
+        document.getElementById("live-netto").innerText = fmt(tNetto) + " netto Transport + " + fmt(g.netto) + " netto/to Entsorgung";
+      }
+    }
+
+    async function bestellungAbsenden() {
+      const name = document.getElementById("kunde-name").value.trim();
+      const tel = document.getElementById("telefon").value.trim();
+      const strasse = document.getElementById("strasse").value.trim();
+      const plzOrt = document.getElementById("plz-ort").value.trim();
+      const datumRaw = document.getElementById("wunsch-datum").value;
+
+      if (!name || !tel || !strasse || !plzOrt || !datumRaw) {
+        alert("Bitte füllen Sie alle Pflichtfelder (*) aus.");
+        return;
+      }
+      const d = datumRaw.split("-");
+      const wunschDatum = d.length === 3 ? (d[2] + "." + d[1] + "." + d[0]) : datumRaw;
+
+      const payload = {
+        action: "bestellung",
+        bestellArt: BESTELL_ART,
+        material: BESTELL_ART === "container" ? document.getElementById("mat-cont").value : document.getElementById("mat-schuett").value,
+        groesse: document.getElementById("groesse").value,
+        tonnen: document.getElementById("tonnen").value,
+        wunschDatum: wunschDatum,
+        zeitfenster: document.getElementById("zeitfenster").value,
+        kundeName: name,
+        telefon: tel,
+        email: document.getElementById("email").value.trim(),
+        strasse: strasse,
+        plzOrt: plzOrt,
+        stellplatz: document.getElementById("stellplatz").value,
+        hinweis: document.getElementById("hinweis").value.trim()
+      };
+
+      const btn = document.getElementById("btn-bestell-send");
+      btn.disabled = true;
+      btn.innerText = "⏳ Bestellung wird übermittelt...";
+
+      try {
+        const resp = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (!res.ok) throw new Error(res.error || "Fehler beim Bestellen");
+
+        document.getElementById("bestell-form").classList.add("hidden");
+        document.getElementById("bestell-done").classList.remove("hidden");
+        document.getElementById("bestell-done-msg").innerHTML =
+          `Vorgangsnummer: <b>${res.boxId}</b><br>Kalkulation: <b>${res.kalkulationText}</b><br><br>Im Kalender <b>Container</b> & im Kalle-Box-Log eingetragen!`;
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "✅ Verbindlich bestellen";
+      }
+    }
+
+    function resetBestellung() {
+      document.getElementById("bestell-done").classList.add("hidden");
+      document.getElementById("bestell-form").classList.remove("hidden");
+      ladeContainerListe();
+    }
+
+    async function internTransportAbsenden() {
+      const projVal = document.getElementById("int-projekt").value;
+      const quelle = document.getElementById("int-quelle").value.trim();
+      const material = document.getElementById("int-material").value.trim();
+      const menge = document.getElementById("int-menge").value.trim();
+
+      if (!quelle || !material || !menge) {
+        alert("Bitte Beladestelle, Material und Menge ausfüllen.");
+        return;
+      }
+
+      let projektFolderId = "";
+      let projektName = "Bauhof / Allgemein";
+      if (projVal.indexOf("||") !== -1) {
+        const parts = projVal.split("||");
+        projektFolderId = parts[0];
+        projektName = parts[1];
+      }
+
+      const zielInput = document.getElementById("int-ziel").value.trim();
+      const payload = {
+        action: "intern_transport",
+        projektFolderId: projektFolderId,
+        projektName: projektName,
+        fahrzeug: document.getElementById("int-fahrzeug").value,
+        containerGroesse: document.getElementById("int-container").value,
+        quelle: quelle,
+        ziel: zielInput || projektName,
+        material: material,
+        menge: menge,
+        fahrer: document.getElementById("int-fahrer").value,
+        bemerkung: document.getElementById("int-bemerkung").value.trim(),
+        gpsLaden: GPS_STATE.laden ? GPS_STATE.laden.coords : "",
+        zeitLaden: GPS_STATE.laden ? GPS_STATE.laden.zeit : "",
+        gpsKippen: GPS_STATE.kippen ? GPS_STATE.kippen.coords : "",
+        zeitKippen: GPS_STATE.kippen ? GPS_STATE.kippen.zeit : "",
+        abrechnungsArt: document.getElementById("int-abrechnung").value,
+        umlaufStunden: document.getElementById("int-stunden").value,
+        fotoDataUrl: FOTO_DATA_URL
+      };
+
+      const btn = document.getElementById("btn-intern-send");
+      btn.disabled = true;
+      btn.innerText = "⏳ Erstelle Lieferschein & lege in 05_Belege ab...";
+
+      try {
+        const resp = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (!res.ok) throw new Error(res.error || "Fehler beim Speichern");
+
+        document.getElementById("intern-form").classList.add("hidden");
+        document.getElementById("intern-done").classList.remove("hidden");
+        document.getElementById("intern-done-msg").innerHTML =
+          `Innerbetrieblicher Lieferschein <b>${res.boxId}</b> wurde erstellt!<br>` +
+          `Projekt: <b>${res.projektName}</b><br>` +
+          `Verrechnung: <b>${res.abrechnungsInfo || ""}</b><br><br>` +
+          `Das Lieferschein-PDF (inkl. GPS & Foto) liegt jetzt automatisch im Projektordner unter <b>05_Belege</b> und ist im Bautagebuch (<b>02_Berichte</b>) vermerkt.`;
+        document.getElementById("intern-pdf-link").href = res.pdfUrl;
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "📄 Lieferschein erstellen & in 05_Belege ablegen";
+      }
+    }
+
+    function resetIntern() {
+      document.getElementById("intern-done").classList.add("hidden");
+      document.getElementById("intern-form").classList.remove("hidden");
+      FOTO_DATA_URL = "";
+      GPS_STATE = { laden: null, kippen: null };
+      document.getElementById("gps-laden-info").innerText = "Noch nicht erfasst";
+      document.getElementById("gps-kippen-info").innerText = "Noch nicht erfasst";
+      document.getElementById("foto-status").innerText = "Kein Foto ausgewählt";
+      document.getElementById("int-bemerkung").value = "";
+    }
+
+    window.onload = function() {
+      const morgen = new Date();
+      morgen.setDate(morgen.getDate() + 1);
+      document.getElementById("wunsch-datum").value = morgen.toISOString().split("T")[0];
+
+      try {
+        const savedGps = JSON.parse(localStorage.getItem("kalle_box_gps") || "{}");
+        if (savedGps.laden) {
+          GPS_STATE.laden = savedGps.laden;
+          document.getElementById("gps-laden-info").innerText = "✔ " + savedGps.laden.zeit + " (" + savedGps.laden.coords + ")";
+        }
+      } catch (e) {}
+
+      berechnePreis();
+      berechneFuellstand();
+      berechneInternLive();
+      initPad();
+      ladeContainerListe();
+      ladeProjekteListe();
+    };
+  </script>
+</body>
+</html>
