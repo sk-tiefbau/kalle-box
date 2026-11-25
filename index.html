@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>Kalle Box V2.8 – Container, GPS & SK-Transport</title>
+  <title>Kalle Box V2.9 – Container, GPS & SK-Transport</title>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; margin: 0; padding: 0; background: #f1f5f9; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
@@ -77,7 +77,7 @@
 <body>
   <div class="box">
     <div class="head">
-      <h1>🚛 Kalle Box V2.8 · Container, GPS & Transport</h1>
+      <h1>🚛 Kalle Box V2.9 · Container, GPS & Transport</h1>
       <p>SK Erd- und Tiefbau GmbH · Pegau · Dispo: 0177 / 27 79 572</p>
     </div>
 
@@ -204,8 +204,16 @@
         <button id="btn-senden" class="submit-btn" onclick="bestellungAbsenden()">✅ Verbindlich bestellen</button>
       </div>
 
-      <!-- BEREICH 3: SK-INTERN 2-STUFEN-TOURLOGIK (LADEN OBEN -> MASKE -> ANKOMMEN UNTEN) -->
+      <!-- BEREICH 3: SK-INTERN 2-STUFEN-TOURLOGIK & KALENDER "TRANSPORT" -->
       <div id="intern-wrap" class="hidden">
+
+        <!-- GEPLANTE TOUREN AUS KALENDER "TRANSPORT" -->
+        <div id="geplante-touren-box" class="info-box hidden" style="background:#fefce8; border-color:#fde047; color:#713f12;">
+          <label style="color:#713f12; margin-bottom:4px;">📅 Heutige geplante Tour aus Kalender „Transport“ übernehmen:</label>
+          <select id="int-geplante-tour" onchange="uebernehmeGeplanteTour(this.value)" style="border-color:#eab308;">
+            <option value="">-- Freie Fahrt / Spontantour --</option>
+          </select>
+        </div>
 
         <!-- STUFE 1 GANZ OBEN: LADEN / LOSFAHREN -->
         <button type="button" id="btn-tour-laden" class="tour-start-btn" onclick="tourStartenLaden()">
@@ -381,6 +389,8 @@
     let FUELL_PROZENT = 100;
     let FOTO_DATA_URL = '';
     let GPS_STATE = { laden: null, kippen: null };
+    let GEPLANTE_TOUREN = [];
+    let AKTIVE_TOUR_EVENT_ID = '';
 
     const PAUSCHALEN = {
       "1,0 m³": { netto: 150.42, brutto: 179.00 },
@@ -445,6 +455,7 @@
       try {
         const entwurf = {
           gpsLaden: GPS_STATE.laden,
+          tourEventId: AKTIVE_TOUR_EVENT_ID,
           projekt: document.getElementById('int-projekt').value,
           fahrzeug: document.getElementById('int-fahrzeug').value,
           container: document.getElementById('int-container').value,
@@ -469,6 +480,7 @@
         if (!raw) return;
         const d = JSON.parse(raw);
         if (d.gpsLaden) GPS_STATE.laden = d.gpsLaden;
+        if (d.tourEventId) AKTIVE_TOUR_EVENT_ID = d.tourEventId;
         if (d.fahrzeug) document.getElementById('int-fahrzeug').value = d.fahrzeug;
         if (d.container) document.getElementById('int-container').value = d.container;
         if (d.fuellProzent) {
@@ -494,11 +506,11 @@
 
     function tourZuruecksetzen() {
       GPS_STATE = { laden: null, kippen: null };
+      AKTIVE_TOUR_EVENT_ID = '';
       try { localStorage.removeItem('kalle_box_tour_v2'); } catch (e) {}
       aktualisiereTourBanner();
     }
 
-    // Aktive Bauprojekte aus Google Drive laden (funktioniert auf GitHub & in Apps Script)
     function ladeProjekteVonApi() {
       const sel = document.getElementById('int-projekt');
       fetch(API_URL + '?mode=projekte')
@@ -521,6 +533,53 @@
         .catch(() => {
           sel.innerHTML = '<option value="Bauhof / Allgemein">Bauhof Pegau / Allgemein (Offline)</option>';
         });
+    }
+
+    function ladeGeplanteTourenVonApi() {
+      fetch(API_URL + '?mode=touren')
+        .then(r => r.json())
+        .then(data => {
+          GEPLANTE_TOUREN = (data && data.touren) ? data.touren : [];
+          const box = document.getElementById('geplante-touren-box');
+          const sel = document.getElementById('int-geplante-tour');
+          if (GEPLANTE_TOUREN.length > 0 && box && sel) {
+            box.classList.remove('hidden');
+            sel.innerHTML = '<option value="">-- Freie Fahrt / Spontantour --</option>';
+            GEPLANTE_TOUREN.forEach((t, idx) => {
+              const opt = document.createElement('option');
+              opt.value = String(idx);
+              opt.innerText = t.uhrzeit + ' Uhr · ' + t.titel.replace(/📝|✅|\[SK-Plan[^\]]*\]/g, '').trim();
+              sel.appendChild(opt);
+            });
+          }
+        })
+        .catch(() => {});
+    }
+
+    function uebernehmeGeplanteTour(idxStr) {
+      if (idxStr === '') {
+        AKTIVE_TOUR_EVENT_ID = '';
+        return;
+      }
+      const t = GEPLANTE_TOUREN[parseInt(idxStr, 10)];
+      if (!t) return;
+      AKTIVE_TOUR_EVENT_ID = t.eventId || '';
+      document.getElementById('int-fahrzeug').value = t.fahrzeug || '3-Achs Volvo';
+      document.getElementById('int-material').value = t.material || '';
+
+      if (t.projektSuch) {
+        const pSel = document.getElementById('int-projekt');
+        for (let i = 0; i < pSel.options.length; i++) {
+          if (pSel.options[i].text.toLowerCase().indexOf(t.projektSuch.toLowerCase()) !== -1) {
+            pSel.selectedIndex = i;
+            break;
+          }
+        }
+      }
+      setOrtProjekt('int-ziel');
+      berechneFuellstand();
+      berechneInternLive();
+      speichereTourEntwurf();
     }
 
     // STUFE 1: LADEN / LOSFAHREN
@@ -803,6 +862,7 @@
         const zielInput = document.getElementById('int-ziel').value.trim();
         const payload = {
           action: 'intern_transport',
+          tourEventId: AKTIVE_TOUR_EVENT_ID,
           projektFolderId: projektFolderId,
           projektName: projektName,
           fahrzeug: document.getElementById('int-fahrzeug').value,
@@ -835,7 +895,7 @@
               'Projekt: <b>' + res.projektName + '</b><br>' +
               'Ladung: <b>' + menge + '</b> (' + material + ')<br>' +
               'Verrechnung: <b>' + (res.abrechnungsInfo || '') + '</b><br><br>' +
-              'Das Lieferschein-PDF liegt jetzt im Projektordner unter <b>05_Belege</b> und ist im Bautagebuch (<b>02_Berichte</b>) eingetragen.';
+              'Das Lieferschein-PDF liegt jetzt unter <b>05_Belege</b>, ist im Bautagebuch eingetragen und im Kalender <b>Transport</b> auf Grün gesetzt.';
           })
           .catch(err => {
             alert('Fehler: ' + err.message);
@@ -857,6 +917,7 @@
     }
 
     ladeProjekteVonApi();
+    ladeGeplanteTourenVonApi();
     ladeTourEntwurf();
     berechneLive();
   </script>
