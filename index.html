@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>Kalle Box V2.9 – Container, GPS & SK-Transport</title>
+  <title>Kalle Box V3.0 – Container, GPS & SK-Transport</title>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; margin: 0; padding: 0; background: #f1f5f9; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
@@ -37,6 +37,11 @@
     .tour-end-btn { width: 100%; background: #ea580c; color: #fff; border: none; padding: 19px 14px; border-radius: 12px; font-size: 17.5px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(234,88,12,0.3); margin-top: 6px; }
     .tour-end-btn:hover { background: #c2410c; }
     .tour-end-btn:disabled { background: #94a3b8; box-shadow: none; cursor: not-allowed; }
+
+    /* 3x3 Material-Schnellwahl */
+    .mat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+    .kb-mat-btn { padding: 12px 4px; font-weight: bold; font-size: 13.5px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; color: #0f172a; cursor: pointer; transition: 0.12s; }
+    .kb-mat-btn.active { background: #1b2a4a; color: #fff; border-color: #1b2a4a; }
 
     .fav-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
     .fav-chip { background: #e2e8f0; border: none; border-radius: 999px; padding: 6px 11px; font-size: 12.5px; font-weight: bold; color: #1e293b; cursor: pointer; }
@@ -77,7 +82,7 @@
 <body>
   <div class="box">
     <div class="head">
-      <h1>🚛 Kalle Box V2.9 · Container, GPS & Transport</h1>
+      <h1>🚛 Kalle Box V3.0 · Container, GPS & Transport</h1>
       <p>SK Erd- und Tiefbau GmbH · Pegau · Dispo: 0177 / 27 79 572</p>
     </div>
 
@@ -204,7 +209,7 @@
         <button id="btn-senden" class="submit-btn" onclick="bestellungAbsenden()">✅ Verbindlich bestellen</button>
       </div>
 
-      <!-- BEREICH 3: SK-INTERN 2-STUFEN-TOURLOGIK & KALENDER "TRANSPORT" -->
+      <!-- BEREICH 3: SK-INTERN 2-BUTTON-TOURLOGIK & MATERIAL-SCHNELLWAHL -->
       <div id="intern-wrap" class="hidden">
 
         <!-- GEPLANTE TOUREN AUS KALENDER "TRANSPORT" -->
@@ -215,25 +220,58 @@
           </select>
         </div>
 
-        <!-- STUFE 1 GANZ OBEN: LADEN / LOSFAHREN -->
+        <!-- STUFE 1 GANZ OBEN: LADEN / START -->
         <button type="button" id="btn-tour-laden" class="tour-start-btn" onclick="tourStartenLaden()">
-          🚛 LADEN / LOSFAHREN
-          <span id="gps-laden-info" class="tour-status-sub">1. Tippen beim Beladen → erfasst Start-GPS & Uhrzeit</span>
+          🚛 LADEN / START
+          <span id="gps-laden-info" class="tour-status-sub">1. Tippen beim Beladen / Abfahrt → erfasst Start-GPS & Uhrzeit</span>
         </button>
 
-        <!-- AKTIVE TOUR-ANSICHT (bleibt während der Fahrt sichtbar offen) -->
+        <!-- AKTIVE TOUR-ANSICHT -->
         <div id="tour-aktiv-banner" class="tour-banner hidden">
           <div class="tour-banner-text">
             <b>🟡 TOUR LÄUFT (Vorgang offen):</b><br>
-            <span id="tour-banner-details">Start erfasst – während der Fahrt alle Felder prüfen und am Ziel unten abschließen.</span>
+            <span id="tour-banner-details">Start erfasst – am Ziel unten mit „Ankommen / Entladen“ abschließen.</span>
           </div>
           <button type="button" class="tour-reset-btn" onclick="tourZuruecksetzen()">✖ Neu</button>
+        </div>
+
+        <!-- 3x3 MATERIAL-SCHNELLWAHL (Beton, Asphalt, Schotter/RC, Kies, Sand, Frostschutz, Aushub, Bauschutt, Maschine) -->
+        <div style="margin-bottom: 14px;">
+          <label>Material / Ladung auswählen (1-Klick):</label>
+          <div id="kb-mat-buttons" class="mat-grid">
+            <button type="button" onclick="selectMaterial('Beton', this)" class="kb-mat-btn">🧱 Beton</button>
+            <button type="button" onclick="selectMaterial('Asphalt', this)" class="kb-mat-btn">🛣️ Asphalt</button>
+            <button type="button" onclick="selectMaterial('Schotter / RC 0-32', this)" class="kb-mat-btn">🪨 Schotter / RC</button>
+            <button type="button" onclick="selectMaterial('Kies', this)" class="kb-mat-btn">⚪ Kies</button>
+            <button type="button" onclick="selectMaterial('Sand', this)" class="kb-mat-btn">⏳ Sand</button>
+            <button type="button" onclick="selectMaterial('Frostschutz 0/32', this)" class="kb-mat-btn active">❄️ Frostschutz</button>
+            <button type="button" onclick="selectMaterial('Bodenaushub', this)" class="kb-mat-btn">🚜 Aushub</button>
+            <button type="button" onclick="selectMaterial('Bauschutt', this)" class="kb-mat-btn">🧱 Bauschutt</button>
+            <button type="button" onclick="selectMaterial('Maschinentransport', this)" class="kb-mat-btn">🏗️ Maschine</button>
+          </div>
+          <input id="int-material" type="text" value="Frostschutz 0/32" oninput="berechneFuellstand(); speichereTourEntwurf()" placeholder="Oder eigenes Material / Maschine eingeben...">
+        </div>
+
+        <!-- DIREKTE MENGE & EINHEIT (m³, t, Stk) -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:14px;">
+          <div>
+            <label>Menge (m³ / t / Stk)</label>
+            <input id="kb-menge" type="number" step="0.1" placeholder="z. B. 2.5 (leer = Container-%)" oninput="uebernehmeDirektMenge(); speichereTourEntwurf()">
+          </div>
+          <div>
+            <label>Einheit</label>
+            <select id="kb-einheit" onchange="uebernehmeDirektMenge(); speichereTourEntwurf()">
+              <option value="m³">m³ (Kubikmeter)</option>
+              <option value="t">t (Tonnen)</option>
+              <option value="Stk">Stk / Maschine</option>
+            </select>
+          </div>
         </div>
 
         <!-- MITTE: MASKE ZUR KONTROLLE -->
         <div class="grid">
           <div class="full">
-            <label>1. Bauprojekt / Kostenträger (26-NNN) *</label>
+            <label>1. Bauprojekt / Kostenträger (oder automatische GPS-Erkennung)</label>
             <select id="int-projekt" onchange="speichereTourEntwurf(); berechneInternLive()">
               <option value="Bauhof / Allgemein">⏳ Lade aktive Bauprojekte...</option>
             </select>
@@ -271,7 +309,7 @@
           </div>
 
           <div class="full">
-            <label>4. Füllstand in 10er-Schritten (%) *</label>
+            <label>4. Füllstand in 10er-Schritten (%) (für Container)</label>
             <div class="fill-grid">
               <button type="button" class="fill-btn" data-pct="10" onclick="setFuellgrad(10, this)">10%</button>
               <button type="button" class="fill-btn" data-pct="20" onclick="setFuellgrad(20, this)">20%</button>
@@ -287,8 +325,8 @@
           </div>
 
           <div>
-            <label>5. Beladestelle (Von) *</label>
-            <input type="text" id="int-quelle" value="Bauhof Pegau" oninput="speichereTourEntwurf()" placeholder="z. B. Bauhof Pegau">
+            <label>5. Beladestelle (Von)</label>
+            <input type="text" id="int-quelle" value="Bauhof Pegau" oninput="speichereTourEntwurf()" placeholder="Leer = automatische Start-GPS-Erkennung">
             <div class="fav-row">
               <button type="button" class="fav-chip" onclick="setOrt('int-quelle','Bauhof Pegau')">🏠 Bauhof Pegau</button>
               <button type="button" class="fav-chip" onclick="setOrtProjekt('int-quelle')">🏗️ Baustelle</button>
@@ -296,8 +334,8 @@
           </div>
 
           <div>
-            <label>6. Entladestelle (Nach) *</label>
-            <input type="text" id="int-ziel" oninput="speichereTourEntwurf()" placeholder="Leer = gewähltes Projekt">
+            <label>6. Entladestelle (Nach)</label>
+            <input type="text" id="int-ziel" oninput="speichereTourEntwurf()" placeholder="Leer = automatische Ziel-GPS-Erkennung">
             <div class="fav-row">
               <button type="button" class="fav-chip" onclick="setOrtProjekt('int-ziel')">🏗️ Baustelle</button>
               <button type="button" class="fav-chip" onclick="setOrt('int-ziel','Kippstelle Backhaus Hennig (Rüssen)')">⛰️ Kippstelle Rüssen</button>
@@ -305,19 +343,8 @@
             </div>
           </div>
 
-          <div>
-            <label>7. Transportiertes Material *</label>
-            <input type="text" id="int-material" value="Frostschutz 0/32" oninput="berechneFuellstand(); speichereTourEntwurf()" placeholder="z. B. Frostschutz 0/32, Erdaushub, Bauschutt">
-            <div class="fav-row">
-              <button type="button" class="fav-chip" onclick="setMat('Frostschutz 0/32')">Frostschutz 0/32</button>
-              <button type="button" class="fav-chip" onclick="setMat('Erdaushub / Boden')">Erdaushub</button>
-              <button type="button" class="fav-chip" onclick="setMat('Bauschutt')">Bauschutt</button>
-              <button type="button" class="fav-chip" onclick="setMat('Asphaltbruch')">Asphaltbruch</button>
-            </div>
-          </div>
-
-          <div>
-            <label>Berechnetes Volumen & Richt-Tonnage *</label>
+          <div class="full">
+            <label>Zusammenfassung Ladung / Volumen *</label>
             <input type="text" id="int-menge" value="Container 10,0 m³ – Füllstand 100 % (10,00 m³ · ca. 18,0 to)" oninput="speichereTourEntwurf()">
           </div>
 
@@ -367,10 +394,10 @@
           </div>
         </div>
 
-        <!-- STUFE 2 GANZ UNTEN: ANKOMMEN / ENTLADEN (erzwingt Kontrolle & erzeugt 1 Lieferschein) -->
+        <!-- STUFE 2 GANZ UNTEN: ANKOMMEN / ENTLADEN -->
         <button id="btn-intern" class="tour-end-btn" onclick="tourBeendenUndLieferscheinErstellen()">
           🏁 ANKOMMEN / ENTLADEN & LIEFERSCHEIN ERSTELLEN
-          <span id="gps-kippen-info" class="tour-status-sub">Erfasst Ziel-GPS & Ankunftszeit und erzeugt genau 1 Lieferschein in 05_Belege</span>
+          <span id="gps-kippen-info" class="tour-status-sub">2. Erfasst Ziel-GPS & Ankunftszeit und bucht Ist-Kosten aufs Projekt</span>
         </button>
       </div>
     </div>
@@ -430,6 +457,34 @@
     morgen.setDate(morgen.getDate() + 1);
     document.getElementById('wunsch-datum').value = morgen.toISOString().split('T')[0];
 
+    function selectMaterial(matName, btnEl) {
+      document.getElementById('int-material').value = matName;
+      document.querySelectorAll('.kb-mat-btn').forEach(btn => btn.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+
+      if (matName === 'Maschinentransport') {
+        document.getElementById('int-fahrzeug').value = 'Tieflader / Maschinentransport';
+        document.getElementById('kb-einheit').value = 'Stk';
+        if (!document.getElementById('kb-menge').value) document.getElementById('kb-menge').value = '1';
+        uebernehmeDirektMenge();
+        berechneInternLive();
+      } else if (!document.getElementById('kb-menge').value) {
+        berechneFuellstand();
+      }
+      speichereTourEntwurf();
+    }
+
+    function uebernehmeDirektMenge() {
+      const mVal = parseFloat(document.getElementById('kb-menge').value);
+      const einh = document.getElementById('kb-einheit').value;
+      const mat = document.getElementById('int-material').value.trim();
+      if (!isNaN(mVal) && mVal > 0) {
+        document.getElementById('int-menge').value = mVal.toString().replace('.', ',') + ' ' + einh + (mat ? (' (' + mat + ')') : '');
+      } else {
+        berechneFuellstand();
+      }
+    }
+
     function aktualisiereTourBanner() {
       const btnStart = document.getElementById('btn-tour-laden');
       const infoEl = document.getElementById('gps-laden-info');
@@ -446,7 +501,7 @@
                             document.getElementById('int-menge').value + ' · ' + document.getElementById('int-material').value;
       } else {
         btnStart.classList.remove('aktiv');
-        infoEl.innerText = '1. Tippen beim Beladen → erfasst Start-GPS & Uhrzeit';
+        infoEl.innerText = '1. Tippen beim Beladen / Abfahrt → erfasst Start-GPS & Uhrzeit';
         banner.classList.add('hidden');
       }
     }
@@ -464,19 +519,21 @@
           ziel: document.getElementById('int-ziel').value,
           material: document.getElementById('int-material').value,
           menge: document.getElementById('int-menge').value,
+          direktMenge: document.getElementById('kb-menge').value,
+          direktEinheit: document.getElementById('kb-einheit').value,
           abrechnung: document.getElementById('int-abrechnung').value,
           stunden: document.getElementById('int-stunden').value,
           fahrer: document.getElementById('int-fahrer').value,
           bemerkung: document.getElementById('int-bemerkung').value
         };
-        localStorage.setItem('kalle_box_tour_v2', JSON.stringify(entwurf));
+        localStorage.setItem('kalle_box_tour_v3', JSON.stringify(entwurf));
       } catch (e) {}
       aktualisiereTourBanner();
     }
 
     function ladeTourEntwurf() {
       try {
-        const raw = localStorage.getItem('kalle_box_tour_v2');
+        const raw = localStorage.getItem('kalle_box_tour_v3');
         if (!raw) return;
         const d = JSON.parse(raw);
         if (d.gpsLaden) GPS_STATE.laden = d.gpsLaden;
@@ -492,6 +549,8 @@
         if (d.quelle) document.getElementById('int-quelle').value = d.quelle;
         if (d.ziel) document.getElementById('int-ziel').value = d.ziel;
         if (d.material) document.getElementById('int-material').value = d.material;
+        if (d.direktMenge) document.getElementById('kb-menge').value = d.direktMenge;
+        if (d.direktEinheit) document.getElementById('kb-einheit').value = d.direktEinheit;
         if (d.menge) document.getElementById('int-menge').value = d.menge;
         if (d.abrechnung) document.getElementById('int-abrechnung').value = d.abrechnung;
         if (d.stunden) document.getElementById('int-stunden').value = d.stunden;
@@ -507,7 +566,7 @@
     function tourZuruecksetzen() {
       GPS_STATE = { laden: null, kippen: null };
       AKTIVE_TOUR_EVENT_ID = '';
-      try { localStorage.removeItem('kalle_box_tour_v2'); } catch (e) {}
+      try { localStorage.removeItem('kalle_box_tour_v3'); } catch (e) {}
       aktualisiereTourBanner();
     }
 
@@ -516,7 +575,7 @@
       fetch(API_URL + '?mode=projekte')
         .then(r => r.json())
         .then(data => {
-          sel.innerHTML = '<option value="Bauhof / Allgemein">Bauhof Pegau / Allgemein (ohne Projekt)</option>';
+          sel.innerHTML = '<option value="Bauhof / Allgemein">Automatisch per GPS / Bauhof Pegau</option>';
           const liste = (data && data.projekte) ? data.projekte : [];
           liste.forEach(p => {
             const opt = document.createElement('option');
@@ -525,13 +584,13 @@
             sel.appendChild(opt);
           });
           try {
-            const saved = JSON.parse(localStorage.getItem('kalle_box_tour_v2') || '{}');
+            const saved = JSON.parse(localStorage.getItem('kalle_box_tour_v3') || '{}');
             if (saved.projekt) sel.value = saved.projekt;
           } catch (e) {}
           aktualisiereTourBanner();
         })
         .catch(() => {
-          sel.innerHTML = '<option value="Bauhof / Allgemein">Bauhof Pegau / Allgemein (Offline)</option>';
+          sel.innerHTML = '<option value="Bauhof / Allgemein">Automatisch per GPS / Bauhof Pegau</option>';
         });
     }
 
@@ -582,7 +641,7 @@
       speichereTourEntwurf();
     }
 
-    // STUFE 1: LADEN / LOSFAHREN
+    // STUFE 1: LADEN / START
     function tourStartenLaden() {
       const infoEl = document.getElementById('gps-laden-info');
       infoEl.innerText = '⏳ Start-GPS & Uhrzeit werden erfasst...';
@@ -623,14 +682,9 @@
       speichereTourEntwurf();
     }
 
-    function setMat(wert) {
-      document.getElementById('int-material').value = wert;
-      berechneFuellstand();
-      speichereTourEntwurf();
-    }
-
     function setFuellgrad(prozent, btn) {
       FUELL_PROZENT = prozent;
+      document.getElementById('kb-menge').value = '';
       document.querySelectorAll('.fill-btn').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
       berechneFuellstand();
@@ -638,6 +692,10 @@
     }
 
     function berechneFuellstand() {
+      if (document.getElementById('kb-menge').value) {
+        uebernehmeDirektMenge();
+        return;
+      }
       const cText = document.getElementById('int-container').value;
       const mMatch = cText.match(/(\d+(?:[.,]\d+)?)/);
       const nennM3 = mMatch ? parseFloat(mMatch[1].replace(',', '.')) : 10.0;
@@ -822,14 +880,13 @@
         });
     }
 
-    // STUFE 2 GANZ UNTEN: ANKOMMEN / ENTLADEN -> ZIEL-GPS ERFASSEN & GENAU 1 LIEFERSCHEIN ERZEUGEN
+    // STUFE 2 GANZ UNTEN: ANKOMMEN / ENTLADEN
     function tourBeendenUndLieferscheinErstellen() {
-      const quelle = document.getElementById('int-quelle').value.trim();
       const material = document.getElementById('int-material').value.trim();
       const menge = document.getElementById('int-menge').value.trim();
 
-      if (!quelle || !material || !menge) {
-        alert('Bitte Beladestelle, Material und Menge ausfüllen.');
+      if (!material || !menge) {
+        alert('Bitte Material und Menge auswählen.');
         return;
       }
 
@@ -859,6 +916,7 @@
           projektName = parts[1];
         }
 
+        const quelleInput = document.getElementById('int-quelle').value.trim();
         const zielInput = document.getElementById('int-ziel').value.trim();
         const payload = {
           action: 'intern_transport',
@@ -867,7 +925,7 @@
           projektName: projektName,
           fahrzeug: document.getElementById('int-fahrzeug').value,
           containerGroesse: document.getElementById('int-container').value + ' (' + FUELL_PROZENT + ' %)',
-          quelle: quelle,
+          quelle: quelleInput || (GPS_STATE.laden && GPS_STATE.laden.coords ? 'GPS-Standort' : 'Bauhof Pegau'),
           ziel: zielInput || (zielCoordsStr ? 'GPS-Standort' : projektName),
           material: material,
           menge: menge,
@@ -882,7 +940,7 @@
           fotoDataUrl: FOTO_DATA_URL
         };
 
-        infoEl.innerText = '⏳ Lieferschein-PDF wird erzeugt & in 05_Belege abgelegt...';
+        infoEl.innerText = '⏳ GPS wird aufgelöst & Lieferschein-PDF erzeugt...';
 
         sendeAnBackend(payload)
           .then(res => {
@@ -900,7 +958,7 @@
           .catch(err => {
             alert('Fehler: ' + err.message);
             btn.disabled = false;
-            infoEl.innerText = 'Erfasst Ziel-GPS & Ankunftszeit und erzeugt genau 1 Lieferschein in 05_Belege';
+            infoEl.innerText = '2. Erfasst Ziel-GPS & Ankunftszeit und bucht Ist-Kosten aufs Projekt';
           });
       };
 
